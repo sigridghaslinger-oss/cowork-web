@@ -303,6 +303,7 @@ function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => KV.set("state", JSON.stringify(S)), 350);
 }
+function saveNow() { clearTimeout(saveTimer); return KV.set("state", JSON.stringify(S)); }
 
 let ui = { view: "home", areaId: null, areaTab: "overview", clientId: null, ctab: "einheiten", month: today().slice(0, 7) + "-01", openSessions: {}, showDone: true };
 let draft = { task: { title: "", area: "", due: "today" }, ev: { title: "", date: today(), start: "", end: "", area: "" }, fin: { kind: "Ausgabe", date: today(), amount: "", category: "Material", note: "" }, words: "", chapter: "", client: "" };
@@ -515,18 +516,47 @@ function icsFor(e) {
     e.place ? `LOCATION:${icsText(e.place)}` : null, a ? `DESCRIPTION:${icsText("Bereich: " + a.name)}` : null,
     "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n") + "\r\n";
 }
-/** Übergibt den Termin an den Kalender: Auf dem iPad zeigt Safari „Zum Kalender hinzufügen“,
- *  am Mac wird die Datei geladen und mit der Kalender-App geöffnet. */
+/** Übergibt den Termin an den Kalender. Am Mac wird die Datei geladen und mit der Kalender-App
+ *  geöffnet. Auf dem iPad (auch als App vom Home-Bildschirm, wo neue Fenster blockiert sind)
+ *  erscheint ein kleiner Dialog: direkt in der Kalender-Vorschau öffnen oder über „Teilen“. */
 function addToCalendar(e) {
-  const blob = new Blob([icsFor(e)], { type: "text/calendar;charset=utf-8" });
+  const name = (e.title || "Termin").replace(/[\\/:*?"<>|]/g, "-") + ".ics";
+  const text = icsFor(e);
+  const blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
+  if (!("ontouchend" in document)) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+    e.inCal = true; save();
+    return;
+  }
+  saveNow();
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  if ("ontouchend" in document) a.target = "_blank";
-  else a.download = (e.title || "Termin").replace(/[\\/:*?"<>|]/g, "-") + ".ics";
-  document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 60000);
-  e.inCal = true; save();
+  const file = new File([text], name, { type: "text/calendar" });
+  const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+  const bg = document.createElement("div"); bg.className = "modal-bg";
+  bg.innerHTML = `<div class="modal" role="dialog"><h3 style="font-size:20px">In den Kalender übernehmen</h3>
+    <div><b>${esc(e.title)}</b><div class="hint">${esc(fmtLong(e.date))}${e.start ? ", " + esc(e.start) + " Uhr" : ", ganztägig"}</div></div>
+    <a class="btn pri" href="${url}" data-cal="go" style="justify-content:center;text-decoration:none">${ic("calendar-plus")}Zum Kalender hinzufügen</a>
+    ${canShare ? `<button class="btn" data-cal="share" style="justify-content:center">${ic("share")}Über Teilen (falls oben nichts passiert)</button>` : ""}
+    <div class="hint small">Im Kalender-Fenster auf „Hinzufügen“ tippen. Über Teilen: „In Dateien sichern“ wählen, dann die Datei in der Dateien-App antippen – iOS bietet „Zum Kalender hinzufügen“ an.</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn ghost" data-cal="no">Nicht übernehmen</button></div></div>`;
+  const close = () => { bg.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); render(); };
+  bg.addEventListener("click", async ev => {
+    const b = ev.target.closest("[data-cal]");
+    if (ev.target === bg) return close();
+    if (!b) return;
+    if (b.dataset.cal === "go") { e.inCal = true; saveNow(); setTimeout(close, 400); return; }  // Link öffnet die Kalender-Vorschau
+    if (b.dataset.cal === "share") {
+      ev.preventDefault();
+      try { await navigator.share({ files: [file], title: e.title }); e.inCal = true; saveNow(); close(); }
+      catch (err) { if (!err || err.name !== "AbortError") toast("Teilen hat nicht geklappt"); }
+      return;
+    }
+    close();
+  });
+  document.body.appendChild(bg); icons();
 }
 
 function evRow(e, showDay = false) {
@@ -556,7 +586,7 @@ function vCalendar() {
         <div class="field" style="justify-content:flex-end"><button class="btn pri" type="submit">${ic("plus")}Eintragen</button></div>
       </form>
       ${chk(S, "calSync", "Neue Termine auch in den Kalender übernehmen")}
-      <div class="hint small">Beim Eintragen fragt Safari, ob der Termin in deinen Kalender soll – einmal auf „Hinzufügen“ tippen. Mit ${ic("calendar-plus")} kannst du jeden Termin auch später übernehmen. Änderungen oder Löschen hier werden nicht in den Kalender übertragen.</div></div>
+      <div class="hint small">Beim Eintragen erscheint „Zum Kalender hinzufügen“ – antippen und im Kalender-Fenster „Hinzufügen“ wählen. Mit ${ic("calendar-plus")} kannst du jeden Termin auch später übernehmen. Änderungen oder Löschen hier werden nicht in den Kalender übertragen.</div></div>
     <div class="card"><div class="ct">${ic("calendar")}Anstehend</div>
       ${days.length ? days.map(day => `<div class="dayh">${day === t ? "Heute – " : day === addDays(t, 1) ? "Morgen – " : ""}${esc(fmtLong(day))}</div>${up.filter(e => e.date === day).map(e => evRow(e)).join("")}`).join("") : '<div class="hint">Noch keine Termine.</div>'}</div>`;
 }
@@ -1007,7 +1037,7 @@ const ACT = {
     bg.addEventListener("click", ev => { const b = ev.target.closest("[data-d]"); if (ev.target === bg) return bg.remove(); if (!b) return; const v = b.dataset.d; if (v === "x") return bg.remove(); t.due = v === "pick" ? (bg.querySelector("#md").value || null) : (v || null); bg.remove(); save(); render(); });
     document.body.appendChild(bg);
   },
-  calEvent(el) { const e = S.events.find(x => x.id === el.dataset.id); if (e) { addToCalendar(e); render(); } },
+  calEvent(el) { const e = S.events.find(x => x.id === el.dataset.id); if (e) addToCalendar(e); },
   delEvent(el) { S.events = S.events.filter(x => x.id !== el.dataset.id); save(); render(); },
   pickClient(el) { ui.clientId = el.dataset.id; render(); },
   ctab(el) { ui.ctab = el.dataset.v; render(); },
@@ -1078,8 +1108,8 @@ document.addEventListener("submit", e => {
     const ev = { id: uid(), title: d.title.trim(), date: d.date, start: d.start || "", end: d.end || "", place: d.place || "", area: d.area || "" };
     S.events.push(ev);
     draft.ev = { title: "", date: d.date, start: "", end: "", area: d.area, place: "" };
-    if (S.calSync !== false) addToCalendar(ev);
-    save(); render(); toast(S.calSync !== false ? "Termin eingetragen – jetzt im Kalender „Hinzufügen“ tippen" : "Termin eingetragen");
+    save(); render();
+    if (S.calSync !== false) addToCalendar(ev); else toast("Termin eingetragen");
   } else if (k === "addClient") {
     const a = curArea(); const n = (draft.client || "").trim(); if (!a || !n) return;
     const c = { id: uid(), name: n, birthday: null, school: "", guardian: "", email: "", phone: "", rate: 0, notes: "", active: true, startDate: today(), anamnesis: {}, findings: [], goals: [], planReview: null, sessions: [], sheets: [] };

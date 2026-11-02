@@ -723,13 +723,13 @@ function vData() {
         ${pill(KV.ok ? "Speichern aktiv" : "Speichern nicht möglich", KV.ok ? "salbei" : "rosa")}${pill(S.persisted ? "Dauerhaft gespeichert" : "Nicht als dauerhaft markiert", S.persisted ? "salbei" : "butter")}</div>
       ${S.persisted ? "" : `<div><button class="btn" data-a="persist">${ic("lock")}Dauerhaft speichern anfragen</button></div>`}</div>
     <div class="card"><div class="ct">${ic("download")}Sicherung</div>
-      <div class="hint">Speichert alles in einer Datei. Auf dem iPad wählst du dann „In Dateien sichern“ › iCloud Drive › Cowork Space.</div>
+      <div class="hint">Speichert alles in einer Datei. Auf dem iPad wählst du dann „In Dateien sichern“ › iCloud Drive › 03_Cowork Space › Sicherungen › Web-App.</div>
       <div class="row"><button class="btn pri" data-a="export">${ic("download")}Sicherung speichern</button>
         <label class="btn">${ic("upload")}Sicherung laden<input type="file" accept=".json,application/json" data-file="backup" hidden></label>
         <span class="hint">${S.lastExport ? "Zuletzt gesichert: " + fmtDate(S.lastExport.slice(0, 10)) : "Noch nie gesichert"}</span></div>
       </div>
     <div class="card"><div class="ct">${ic("laptop")}Daten vom Mac übernehmen</div>
-      <div>Wähle in iCloud Drive › Cowork Space › Daten die beiden Dateien <b>bereiche.json</b> und <b>module.json</b> (beide gleichzeitig markieren).</div>
+      <div>Wähle in iCloud Drive › 03_Cowork Space › Daten die beiden Dateien <b>bereiche.json</b> und <b>module.json</b> (beide gleichzeitig markieren).</div>
       <div class="hint">Übernommen werden Bereiche, Kundenkarteien (Stammdaten, Anamnese, Befunde, Förderplan, Einheiten), Finanzen und das Schreibziel. Handschriftliche Bögen aus der Web-App bleiben erhalten. Aufgaben und Termine aus Erinnerungen und Kalender kann eine Web-App nicht lesen.</div>
       <div><label class="btn">${ic("upload")}Mac-Dateien wählen<input type="file" accept=".json,application/json" multiple data-file="mac" hidden></label></div></div>`;
 }
@@ -1070,7 +1070,7 @@ async function offerFile(name, text, mime = "application/json") {
   }
   // iPad/iPhone: Teilen-Menü › „In Dateien sichern“
   if (navigator.canShare && navigator.canShare({ files: [file] }) && "ontouchend" in document) {
-    try { await navigator.share({ files: [file], title: name }); toast("Wähle „In Dateien sichern“ › iCloud Drive › Cowork Space"); return true; }
+    try { await navigator.share({ files: [file], title: name }); toast("Wähle „In Dateien sichern“ › iCloud Drive › 03_Cowork Space › Sicherungen › Web-App"); return true; }
     catch (err) { if (err && err.name === "AbortError") return false; }
   }
   // Sonst: normaler Download

@@ -293,7 +293,7 @@ function defaults() {
     ],
     tasks: [], events: [], notes: {},
     clients: {}, finance: {}, writing: {},
-    lastExport: null, persisted: false, calSync: true, calShortcut: false,
+    lastExport: null, persisted: false,
   };
 }
 
@@ -444,8 +444,8 @@ function vHome() {
     ${backupBanner()}
     <h2 class="h2">Überblick</h2>
     <div class="tiles">
-      ${tile("butter", "sun", "Heute", `${due} ${due === 1 ? "Aufgabe" : "Aufgaben"} · ${evToday} ${evToday === 1 ? "Termin" : "Termine"}`, 'data-a="go" data-v="today"')}
-      ${tile("rosa", "calendar", "Termine", next ? `${next.date === t ? "Heute" : fmtDay(next.date)}${next.start ? " " + next.start : ""}: ${next.title}` : "Keine Termine", 'data-a="go" data-v="calendar"')}
+      ${tile("butter", "sun", "Heute", `${due} ${due === 1 ? "Aufgabe" : "Aufgaben"} fällig`, 'data-a="go" data-v="today"')}
+      ${tile("rosa", "calendar", "Termine", "In der Kalender-App", 'data-a="go" data-v="calendar"')}
       ${tile("sand", "database", "Daten & Sicherung", S.lastExport ? "Gesichert am " + fmtDate(S.lastExport.slice(0, 10)) : "Noch nicht gesichert", 'data-a="go" data-v="data"')}
     </div>
     <h2 class="h2">Bereiche</h2>
@@ -487,8 +487,9 @@ function vToday() {
     ${quickAdd()}
     <div class="cols"><div class="card"><div class="ct">${ic("list-checks")}Aufgaben für heute</div>${taskList(list, true, "Nichts fällig – schön!")}</div>
     <div class="stack">
-      <div class="card"><div class="ct">${ic("calendar")}Termine heute</div>${evs.length ? evs.map(evRow).join("") : '<div class="hint">Keine Termine heute.</div>'}
-        ${evsT.length ? `<div class="dayh">Morgen</div>${evsT.map(evRow).join("")}` : ""}</div>
+      <div class="card"><div class="ct">${ic("calendar")}Termine</div>
+        ${isTouch() ? `<div class="row">${calLink(t, "Heute im Kalender")}${calLink(addDays(t, 1), "Morgen", "btn")}</div>` : '<div class="hint">Deine Termine findest du in der Kalender-App und in der Mac-App.</div>'}
+        ${evs.length || evsT.length ? `<div class="dayh">Aus der Web-App</div>${evs.map(evRow).join("")}${evsT.map(e => evRow(e, true)).join("")}` : ""}</div>
       ${wa.map(a => { const w = writingOf(a.id); const n = w.log[t] || 0; const pct = Math.min(100, n / Math.max(1, w.dailyGoal) * 100);
         return `<div class="card" style="cursor:pointer" data-a="go" data-v="area" data-id="${a.id}" data-tab="writing"><div class="ct">${ic("pen-line")}Schreiben heute<span class="sp small muted">${streak(w) ? "🔥 " + streak(w) : ""}</span></div>
         <div>${n} / ${w.dailyGoal} Wörter</div><div style="height:8px;border-radius:9px;background:${colr(a.color)[1]}"><div style="height:100%;width:${pct}%;border-radius:9px;background:${pct >= 100 ? "var(--ok)" : colr(a.color)[0]}"></div></div></div>`; }).join("")}
@@ -496,90 +497,13 @@ function vToday() {
 }
 
 // ----- Termine -----
-// ----- Übergabe an den Apple-Kalender (ICS-Datei) -----
-function icsText(s) { return String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n"); }
-function icsFor(e) {
-  const d = e.date.replace(/-/g, "");
-  const t = s => s.replace(":", "") + "00";
-  const now = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
-  let start, end;
-  if (e.start) {
-    let endTime = e.end;
-    if (!endTime || endTime <= e.start) { const [h, m] = e.start.split(":").map(Number); const x = h * 60 + m + 60; endTime = `${pad(Math.min(23, Math.floor(x / 60)))}:${pad(x >= 24 * 60 ? 59 : x % 60)}`; }
-    start = `DTSTART:${d}T${t(e.start)}`; end = `DTEND:${d}T${t(endTime)}`;
-  } else {
-    start = `DTSTART;VALUE=DATE:${d}`; end = `DTEND;VALUE=DATE:${addDays(e.date, 1).replace(/-/g, "")}`;
-  }
-  const a = area(e.area);
-  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cowork Space//DE", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "BEGIN:VEVENT",
-    `UID:${e.id}@cowork-web`, `DTSTAMP:${now}`, start, end, `SUMMARY:${icsText(e.title)}`,
-    e.place ? `LOCATION:${icsText(e.place)}` : null, a ? `DESCRIPTION:${icsText("Bereich: " + a.name)}` : null,
-    "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n") + "\r\n";
-}
-const SHORTCUT = "Cowork Termin";
+// ----- Termine: liegen im Apple-Kalender -----
+// Eine Web-App darf den Kalender nicht beschreiben. Deshalb öffnet sie die Kalender-App
+// am gewünschten Tag (calshow: erwartet Sekunden seit dem 1.1.2001).
 const isTouch = () => "ontouchend" in document;
-
-/** Übergibt den Termin an den Kalender.
- *  Mac: Die ICS-Datei wird geladen und mit der Kalender-App geöffnet.
- *  iPad: iOS lässt Home-Bildschirm-Apps keine Kalender-Dateien öffnen. Deshalb übernimmt der
- *  Kurzbefehl „Cowork Termin“ (Kurzbefehle-App) das Eintragen – einmal einrichten, dann automatisch. */
-function addToCalendar(e) {
-  if (!isTouch()) {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([icsFor(e)], { type: "text/calendar;charset=utf-8" }));
-    a.download = (e.title || "Termin").replace(/[\\/:*?"<>|]/g, "-") + ".ics";
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
-    e.inCal = true; save();
-    return;
-  }
-  if (!S.calShortcut) { shortcutGuide(); return; }
-  e.inCal = true;
-  saveNow().then(() => { location.href = shortcutURL(e); });
-}
-function shortcutURL(e) {
-  const de = (d, t) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)} ${t}`;
-  let start = e.start || "00:00", end = e.end;
-  if (!e.start) end = "23:59";
-  else if (!end || end <= e.start) { const [h, m] = e.start.split(":").map(Number); const x = Math.min(h * 60 + m + 60, 23 * 60 + 59); end = `${pad(Math.floor(x / 60))}:${pad(x % 60)}`; }
-  const a = area(e.area);
-  const data = { titel: e.title, start: de(e.date, start), ende: de(e.date, end), ort: e.place || "", notiz: a ? "Bereich: " + a.name : "" };
-  return `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT)}&input=text&text=${encodeURIComponent(JSON.stringify(data))}`;
-}
-/** Nach dem Test-Termin (auch wenn iOS die App beim Zurückkehren neu lädt): nachfragen. */
-function checkCalTest() {
-  if (!S.calTestPending || document.visibilityState !== "visible" || document.querySelector(".modal-bg")) return;
-  S.calTestPending = false; save();
-  confirmBox("Steht der Test-Termin heute in deinem Kalender?", "Ja, klappt", () => { S.calShortcut = true; save(); render(); toast("Kalender-Übergabe ist eingerichtet"); },
-    "Falls nicht: Prüfe den Namen „" + SHORTCUT + "“ und die Felder im Kurzbefehl, dann erneut testen. Den Test-Termin kannst du im Kalender löschen.");
-}
-document.addEventListener("visibilitychange", () => setTimeout(checkCalTest, 600));
-
-function shortcutGuide() {
-  const bg = document.createElement("div"); bg.className = "modal-bg";
-  const step = (n, html) => `<div class="row" style="align-items:flex-start;flex-wrap:nowrap"><span class="badge" style="background:var(--tq-pastel);color:var(--tq);min-width:26px;justify-content:center">${n}</span><div class="grow">${html}</div></div>`;
-  bg.innerHTML = `<div class="modal" role="dialog" style="width:min(620px,100%)"><h3 style="font-size:20px">Kurzbefehl „${SHORTCUT}“ einrichten</h3>
-    <div class="hint">Einmalig, etwa 5 Minuten. Danach trägt Cowork Space neue Termine automatisch in deinen Kalender ein.</div>
-    ${step(1, "Öffne die App <b>Kurzbefehle</b> und tippe oben auf <b>+</b>.")}
-    ${step(2, `Tippe oben auf den Namen und nenne den Kurzbefehl genau <b>${SHORTCUT}</b>.`)}
-    ${step(3, "Aktion suchen: <b>Wörterbuch abrufen</b> – antippen. Tippe in der Aktion auf das blaue Feld und wähle <b>Kurzbefehl-Eingabe</b>.")}
-    ${step(4, "Aktion suchen: <b>Wörterbuchwert abrufen</b>. Tippe auf <b>Schlüssel</b> und schreibe <b>titel</b>.")}
-    ${step(5, "Schritt 4 noch dreimal wiederholen, mit den Schlüsseln <b>start</b>, <b>ende</b> und <b>ort</b>.")}
-    ${step(6, "Aktion suchen: <b>Neues Ereignis hinzufügen</b>. Dann jeweils das Feld antippen › <b>Variable auswählen</b> › den passenden Block antippen:<br>• <b>Ereignis</b>/Titel → Block mit <i>titel</i><br>• <b>Startdatum</b> → Block mit <i>start</i><br>• <b>Enddatum</b> → Block mit <i>ende</i><br>• unter <b>Mehr anzeigen</b> › <b>Ort</b> → Block mit <i>ort</i><br>• <b>Kalender</b>: deinen Kalender wählen (z. B. iCloud)")}
-    ${step(7, "Oben rechts auf <b>Fertig</b>. Zurück in Cowork Space: unten auf <b>Test-Termin senden</b> tippen.")}
-    <div class="hint small">Wenn iOS beim ersten Mal fragt, ob der Kurzbefehl auf den Kalender zugreifen darf: <b>Erlauben</b>. Danach mit <b>‹ Cowork Space</b> oben links zurückkehren.</div>
-    <div class="row" style="justify-content:flex-end"><button class="btn" data-g="no">Später</button><button class="btn pri" data-g="test">${ic("send")}Test-Termin senden</button></div></div>`;
-  bg.addEventListener("click", ev => {
-    const b = ev.target.closest("[data-g]");
-    if (ev.target === bg || (b && b.dataset.g === "no")) return bg.remove();
-    if (b && b.dataset.g === "test") {
-      bg.remove();
-      const t = { id: uid(), title: "Cowork Space – Test", date: today(), start: "", end: "", place: "", area: "" };
-      S.calTestPending = true;
-      saveNow().then(() => { location.href = shortcutURL(t); });
-    }
-  });
-  document.body.appendChild(bg); icons();
+function calURL(dateIso) { const d = parseIso(dateIso); d.setHours(9, 0, 0, 0); return "calshow:" + Math.floor(d.getTime() / 1000 - 978307200); }
+function calLink(dateIso, label, cls = "btn pri") {
+  return isTouch() ? `<a class="${cls}" href="${calURL(dateIso)}" style="text-decoration:none">${ic("calendar")}${esc(label)}</a>` : "";
 }
 
 function evRow(e, showDay = false) {
@@ -588,32 +512,23 @@ function evRow(e, showDay = false) {
   return `<div class="ev"><span class="bar" style="background:${c}"></span><div class="grow"><div style="font-weight:700">${esc(e.title)}</div>
     <div class="meta">${showDay ? esc(fmtDay(e.date)) + " · " : ""}${e.start ? esc(e.start) + (e.end ? "–" + esc(e.end) : "") : "ganztägig"}${e.place ? " · " + esc(e.place) : ""}
     ${a ? `<span class="badge" style="background:${colr(a.color)[1]};color:${c}">${esc(a.name)}</span>` : ""}</div></div>
-    ${e.inCal ? `<span class="iconbtn" title="An den Kalender übergeben" style="color:var(--ok)">${ic("calendar-check")}</span>` : ""}
-    <button class="iconbtn" data-a="calEvent" data-id="${e.id}" aria-label="In den Kalender übernehmen" title="In den Kalender übernehmen">${ic("calendar-plus")}</button>
     <button class="iconbtn" data-a="delEvent" data-id="${e.id}" aria-label="Termin löschen">${ic("trash-2")}</button></div>`;
 }
 function vCalendar() {
   const t = today();
   const d = draft.ev;
-  const up = S.events.filter(e => e.date >= addDays(t, -7)).sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")));
-  const days = [...new Set(up.map(e => e.date))];
+  const old = S.events.slice().sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")));
   return `<div><div class="eyebrow">Termine</div><h1 class="h1">Kalender</h1></div>
-    <div class="card"><div class="ct">${ic("calendar-plus")}Neuer Termin</div>
-      <form class="fgrid" data-form="addEvent">
-        ${fld("Titel", inp(d, "title", { ph: "z. B. Lernanker: Erstgespräch" }))}
-        ${fld("Datum", inp(d, "date", { type: "date" }))}
-        ${fld("Beginn", inp(d, "start", { type: "time" }))}
-        ${fld("Ende", inp(d, "end", { type: "time" }))}
-        ${fld("Ort", inp(d, "place", { ph: "optional" }))}
-        ${fld("Bereich", sel(d, "area", [["", "Kein Bereich"], ...S.areas.map(a => [a.id, a.name])], false))}
-        <div class="field" style="justify-content:flex-end"><button class="btn pri" type="submit">${ic("plus")}Eintragen</button></div>
-      </form>
-      ${chk(S, "calSync", "Neue Termine auch in den Kalender übernehmen")}
-      ${isTouch() ? `<div class="row small">${S.calShortcut ? `<span style="color:var(--ok);font-weight:700">${ic("check")} Kurzbefehl „${SHORTCUT}“ eingerichtet</span>` : `<span class="muted">Auf dem iPad braucht es dafür einmalig den Kurzbefehl „${SHORTCUT}“.</span>`}
-        <button class="btn sm" data-a="shortcutGuide">${S.calShortcut ? "Anleitung & Test" : "Jetzt einrichten"}</button></div>` : ""}
-      <div class="hint small">Neue Termine werden beim Eintragen in deinen Kalender übernommen. Mit ${ic("calendar-plus")} kannst du jeden Termin auch später übernehmen. Änderungen oder Löschen hier werden nicht in den Kalender übertragen.</div></div>
-    <div class="card"><div class="ct">${ic("calendar")}Anstehend</div>
-      ${days.length ? days.map(day => `<div class="dayh">${day === t ? "Heute – " : day === addDays(t, 1) ? "Morgen – " : ""}${esc(fmtLong(day))}</div>${up.filter(e => e.date === day).map(e => evRow(e)).join("")}`).join("") : '<div class="hint">Noch keine Termine.</div>'}</div>`;
+    <div class="card"><div class="ct">${ic("calendar")}Termine im Kalender</div>
+      <div>Deine Termine führst du in der <b>Kalender-App</b>. So sind sie auf iPad, iPhone und Mac gleich, und die Mac-App von Cowork Space zeigt sie automatisch an.</div>
+      ${isTouch() ? `<div class="row">${calLink(t, "Heute im Kalender")}${calLink(addDays(t, 1), "Morgen", "btn")}${calLink(addDays(t, 7), "In einer Woche", "btn")}</div>
+      <div class="row"><div style="width:190px">${inp(d, "date", { type: "date", rr: true })}</div>${calLink(d.date || t, "Diesen Tag öffnen", "btn")}</div>
+      <div class="hint small">Im Kalender oben rechts auf <b>+</b> tippen, um einen Termin anzulegen. Zurück zu Cowork Space geht es über den App-Umschalter.</div>`
+      : `<div class="hint">Am Mac legst du Termine in der Mac-App Cowork Space oder direkt in der Kalender-App an.</div>`}
+    </div>
+    ${old.length ? `<div class="card"><div class="ct">${ic("history")}Frühere Termine aus der Web-App</div>
+      <div class="hint small">Diese Termine stehen nur hier, nicht im Kalender. Trag sie bei Bedarf im Kalender ein und lösche sie dann hier.</div>
+      ${old.map(e => evRow(e, true)).join("")}</div>` : ""}`;
 }
 
 // ----- Bereich -----
@@ -629,7 +544,7 @@ function vArea(a) {
     const list = sortTasks(areaTasks(a.id).filter(t => ui.showDone || !t.done || t.doneAt === today()));
     const evs = S.events.filter(e => e.area === a.id && e.date >= today()).sort((x, y) => (x.date + (x.start || "")).localeCompare(y.date + (y.start || ""))).slice(0, 8);
     content = `<div class="cols"><div class="card"><div class="ct">${ic("list-checks")}Aufgaben</div>${quickAdd(a.id)}${taskList(list, false, "Noch keine Aufgaben in diesem Bereich.")}</div>
-      <div class="stack"><div class="card"><div class="ct">${ic("calendar")}Termine</div>${evs.length ? evs.map(e => evRow(e, true)).join("") : '<div class="hint">Keine Termine in diesem Bereich.</div>'}</div>
+      <div class="stack">${evs.length ? `<div class="card"><div class="ct">${ic("calendar")}Termine aus der Web-App</div>${evs.map(e => evRow(e, true)).join("")}</div>` : ""}
       <div class="card"><div class="ct">${ic("notebook-pen")}Notizen</div>${ta(S.notes, a.id, "Gedanken, Ideen, Links …", 8)}</div></div></div>`;
   }
   return `<div class="row"><span style="width:58px;height:58px;border-radius:16px;background:${pastel};color:${deep};display:grid;place-items:center">${ic(a.icon)}</span>
@@ -1062,8 +977,6 @@ const ACT = {
     bg.addEventListener("click", ev => { const b = ev.target.closest("[data-d]"); if (ev.target === bg) return bg.remove(); if (!b) return; const v = b.dataset.d; if (v === "x") return bg.remove(); t.due = v === "pick" ? (bg.querySelector("#md").value || null) : (v || null); bg.remove(); save(); render(); });
     document.body.appendChild(bg);
   },
-  shortcutGuide() { shortcutGuide(); },
-  calEvent(el) { const e = S.events.find(x => x.id === el.dataset.id); if (e) addToCalendar(e); },
   delEvent(el) { S.events = S.events.filter(x => x.id !== el.dataset.id); save(); render(); },
   pickClient(el) { ui.clientId = el.dataset.id; render(); },
   ctab(el) { ui.ctab = el.dataset.v; render(); },
@@ -1129,13 +1042,6 @@ document.addEventListener("submit", e => {
     const due = { none: null, today: today(), tomorrow: addDays(today(), 1), week: addDays(today(), 7) }[d.due || "none"];
     S.tasks.push({ id: uid(), title, area: f.dataset.area || d.area || "", due, done: false, created: new Date().toISOString() });
     d.title = ""; save(); render(); const n = document.getElementById("newtask"); if (n) n.focus();
-  } else if (k === "addEvent") {
-    const d = draft.ev; if (!(d.title || "").trim() || !d.date) { toast("Bitte Titel und Datum angeben"); return; }
-    const ev = { id: uid(), title: d.title.trim(), date: d.date, start: d.start || "", end: d.end || "", place: d.place || "", area: d.area || "" };
-    S.events.push(ev);
-    draft.ev = { title: "", date: d.date, start: "", end: "", area: d.area, place: "" };
-    save(); render();
-    if (S.calSync !== false) addToCalendar(ev); else toast("Termin eingetragen");
   } else if (k === "addClient") {
     const a = curArea(); const n = (draft.client || "").trim(); if (!a || !n) return;
     const c = { id: uid(), name: n, birthday: null, school: "", guardian: "", email: "", phone: "", rate: 0, notes: "", active: true, startDate: today(), anamnesis: {}, findings: [], goals: [], planReview: null, sessions: [], sheets: [] };
@@ -1259,6 +1165,5 @@ function remapArea(from, to) {
   try { if (navigator.storage && navigator.storage.persisted) S.persisted = await navigator.storage.persisted(); } catch (e) {}
   render();
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
-  setTimeout(checkCalTest, 800);
 })();
 </script>

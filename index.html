@@ -1,0 +1,1166 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cowork Space</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cowork Space">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F7F0E3">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* Layout: Seitenleiste + Arbeitsfläche; Kacheln mit Pastellfarben, Creme-Grund, braune Schrift, Türkis als Akzent */
+:root {
+  --cream: #F7F0E3;
+  --paper: #FFFBF4;
+  --sand: #E6D7C1;
+  --brown: #5A3E2B;
+  --brown-soft: #8C6C55;
+  --tq: #2A9D96;
+  --tq-pastel: #CDEDE9;
+  --red: #B5483A;
+  --ok: #5E8F62;
+  --font: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--cream); color: var(--brown); font-family: var(--font); font-size: 15px; -webkit-text-size-adjust: 100%; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--cream); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--tq); outline-offset: 2px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+
+.shell { display: grid; grid-template-columns: 236px 1fr; height: 100%; }
+.side { background: color-mix(in srgb, var(--sand) 45%, var(--cream)); padding: 18px 12px; padding-left: max(12px, env(safe-area-inset-left, 0px)); overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.brand { font-weight: 800; font-size: 18px; padding: 4px 10px 14px; display: flex; gap: 8px; align-items: center; }
+.brand .dot { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, #38429e, var(--tq)); }
+.navh { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--brown-soft); padding: 14px 10px 4px; }
+.nav { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; padding: 9px 10px; border-radius: 10px; text-align: left; font-weight: 600; }
+.nav:hover { background: rgba(90,62,43,.06); }
+.nav.on { background: var(--paper); box-shadow: 0 1px 3px rgba(90,62,43,.12); }
+.nav .cnt { margin-left: auto; font-size: 12px; color: var(--brown-soft); }
+.nav svg { width: 18px; height: 18px; flex: none; }
+.main { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 22px; }
+@media (min-width: 900px) { .wrap { padding-left: 32px; padding-right: max(32px, env(safe-area-inset-right, 0px)); } }
+
+@media (max-width: 820px) {
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .side { flex-direction: row; overflow-x: auto; padding: 8px max(16px, env(safe-area-inset-left, 0px)); gap: 4px; align-items: center; }
+  .brand, .navh, .nav .cnt { display: none; }
+  .nav { width: auto; white-space: nowrap; }
+}
+
+.eyebrow { font-size: 15px; color: var(--brown-soft); }
+.h1 { font-size: 32px; font-weight: 800; letter-spacing: -.01em; }
+.h2 { font-size: 18px; font-weight: 700; color: var(--brown-soft); }
+.muted { color: var(--brown-soft); }
+.small { font-size: 13px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; min-width: 0; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 18px; align-items: start; }
+@media (max-width: 1000px) { .cols { grid-template-columns: 1fr; } }
+.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+.card { background: var(--paper); border: 1px solid color-mix(in srgb, var(--sand) 70%, transparent); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; box-shadow: 0 2px 6px rgba(90,62,43,.04); }
+.card > .ct { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; }
+.card > .ct svg { width: 18px; height: 18px; color: var(--brown-soft); }
+.card > .ct .sp { margin-left: auto; }
+.hint { color: var(--brown-soft); font-size: 14px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+.tile { border: 1.5px solid transparent; border-radius: 22px; padding: 20px; min-height: 176px; text-align: left; display: flex; flex-direction: column; gap: 8px; transition: transform .15s ease, box-shadow .15s ease; box-shadow: 0 3px 8px rgba(90,62,43,.07); }
+.tile:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(90,62,43,.13); }
+.tile .ic { width: 52px; height: 52px; border-radius: 14px; background: rgba(255,251,244,.85); display: grid; place-items: center; }
+.tile .ic svg { width: 26px; height: 26px; }
+.tile .tt { margin-top: auto; font-size: 21px; font-weight: 800; }
+.tile .ts { font-size: 14px; color: var(--brown-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile.add { background: rgba(255,251,244,.5); border: 2px dashed var(--sand); align-items: center; justify-content: center; color: var(--brown-soft); font-weight: 700; box-shadow: none; }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; background: rgba(255,251,244,.85); white-space: nowrap; }
+.badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+
+.btn { border: 1px solid var(--sand); background: var(--paper); border-radius: 10px; padding: 8px 14px; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; min-height: 40px; }
+.btn:hover { background: #fff; }
+.btn svg { width: 16px; height: 16px; }
+.btn.pri { background: var(--tq); border-color: var(--tq); color: #fff; }
+.btn.pri:hover { background: #238a84; }
+.btn.danger { color: var(--red); }
+.btn.ghost { border-color: transparent; background: none; }
+.btn.sm { min-height: 32px; padding: 4px 10px; font-size: 13px; }
+.btn:disabled { opacity: .45; cursor: default; }
+.iconbtn { border: 0; background: none; padding: 6px; border-radius: 8px; color: var(--brown-soft); display: inline-grid; place-items: center; }
+.iconbtn:hover { background: rgba(90,62,43,.07); }
+.iconbtn svg { width: 18px; height: 18px; }
+
+.in { border: 1px solid var(--sand); background: #fff; border-radius: 10px; padding: 8px 11px; min-height: 40px; width: 100%; min-width: 0; }
+select.in { width: auto; }
+.ta { min-height: 84px; resize: vertical; line-height: 1.45; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field > span { font-size: 13px; color: var(--brown-soft); font-weight: 600; }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.chk { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; }
+.chk input { width: 20px; height: 20px; accent-color: var(--tq); }
+
+.tabs { display: flex; gap: 4px; background: rgba(90,62,43,.07); padding: 4px; border-radius: 12px; width: fit-content; max-width: 100%; overflow-x: auto; }
+.tab { border: 0; background: none; padding: 8px 14px; border-radius: 9px; font-weight: 700; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.tab svg { width: 16px; height: 16px; }
+.tab.on { background: var(--paper); box-shadow: 0 1px 3px rgba(90,62,43,.15); color: var(--tq); }
+
+.list { display: flex; flex-direction: column; }
+.item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--sand) 60%, transparent); }
+.item:last-child { border-bottom: 0; }
+.check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--sand); background: #fff; flex: none; display: grid; place-items: center; padding: 0; }
+.check.done { background: var(--ok); border-color: var(--ok); color: #fff; }
+.check svg { width: 15px; height: 15px; }
+.item .tx { flex: 1; min-width: 0; }
+.item .tx .t { font-weight: 600; overflow-wrap: anywhere; }
+.item.done .t { text-decoration: line-through; color: var(--brown-soft); }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--brown-soft); margin-top: 2px; align-items: center; }
+.late { color: var(--red); font-weight: 700; }
+.ev { display: flex; gap: 10px; padding: 8px 0; }
+.ev .bar { width: 4px; border-radius: 2px; flex: none; }
+.dayh { font-weight: 800; font-size: 14px; color: var(--brown-soft); padding-top: 8px; }
+
+.banner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 14px 16px; border-radius: 14px; background: #F7E8B6; }
+.banner svg { width: 20px; height: 20px; flex: none; color: #A57F1F; }
+.banner .grow { min-width: 200px; }
+
+.split { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+.clist button { width: 100%; border: 0; background: none; text-align: left; padding: 9px 10px; border-radius: 10px; display: flex; gap: 8px; align-items: center; font-weight: 600; }
+.clist button.on { background: #F8DCC6; }
+.clist button .r { margin-left: auto; font-size: 12px; color: #B85C78; font-weight: 700; }
+
+.sub { background: var(--cream); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.sub .hd { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+.stat { border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.stat .l { font-size: 14px; font-weight: 700; }
+.stat .v { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.bars { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; align-items: end; height: 140px; }
+.bars .b { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; font-size: 11px; color: var(--brown-soft); }
+.bars .b i { display: block; width: 100%; max-width: 26px; border-radius: 5px 5px 2px 2px; min-height: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.sw { width: 34px; height: 34px; border-radius: 9px; border: 2px solid transparent; padding: 0; }
+.sw.on { border-width: 3px; }
+.icons { display: flex; gap: 6px; flex-wrap: wrap; }
+.icons button { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--sand); background: #fff; display: grid; place-items: center; }
+.icons button.on { background: var(--tq-pastel); border-color: var(--tq); }
+.icons svg { width: 20px; height: 20px; }
+
+/* Dialoge */
+.modal-bg { position: fixed; inset: 0; background: rgba(60,40,28,.35); z-index: 50; display: grid; place-items: center; padding: 20px; padding-top: max(20px, env(safe-area-inset-top, 0px)); }
+.modal { background: var(--paper); border-radius: 20px; padding: 22px; width: min(520px, 100%); max-height: 90%; overflow: auto; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 20px 60px rgba(60,40,28,.3); }
+.toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--brown); color: #fff; padding: 10px 18px; border-radius: 99px; font-weight: 700; z-index: 60; box-shadow: 0 6px 20px rgba(0,0,0,.2); }
+
+/* Schreibblatt mit Apple Pencil */
+.sheetv { position: fixed; inset: 0; background: #E9E1D3; z-index: 40; display: flex; flex-direction: column; }
+.sheetbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 14px; padding-top: max(10px, env(safe-area-inset-top, 0px)); padding-left: max(14px, env(safe-area-inset-left, 0px)); padding-right: max(14px, env(safe-area-inset-right, 0px)); background: var(--paper); border-bottom: 1px solid var(--sand); }
+.sheetbar .ttl { font-weight: 800; flex: 1; min-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tool { border: 1px solid var(--sand); background: #fff; border-radius: 10px; min-width: 44px; min-height: 40px; display: inline-grid; place-items: center; padding: 0 10px; }
+.tool.on { background: var(--tq-pastel); border-color: var(--tq); }
+.tool svg { width: 20px; height: 20px; }
+.colordot { width: 26px; height: 26px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--sand); padding: 0; }
+.colordot.on { box-shadow: 0 0 0 2px var(--tq); }
+.sheetscroll { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; padding: 20px 12px 60px; }
+.holder { margin: 0 auto; position: relative; }
+.scaler { position: absolute; left: 0; top: 0; width: 720px; transform-origin: 0 0; }
+.paper { width: 720px; background: #fff; box-shadow: 0 4px 20px rgba(60,40,28,.15); position: relative; color: #5A3E2B; font-family: var(--font); }
+.paper canvas { position: absolute; left: 0; top: 0; touch-action: pan-x pan-y; }
+.paper canvas.finger { touch-action: none; }
+.pband { background: #CDEDE9; height: 100px; padding: 24px 44px 0; }
+.pband .e { font-size: 12px; font-weight: 800; letter-spacing: .12em; color: #2A9D96; line-height: 16px; height: 16px; }
+.pband .t { font-size: 27px; font-weight: 800; line-height: 36px; height: 36px; white-space: nowrap; }
+.pbody { padding: 22px 44px 30px; }
+.pfields { display: flex; gap: 14px; height: 52px; }
+.pf { border-bottom: 1px solid #8C6C55; position: relative; }
+.pf .l { font-size: 11px; font-weight: 700; color: #8C6C55; line-height: 14px; height: 14px; }
+.pf .v { font-size: 17px; font-weight: 700; line-height: 26px; height: 26px; white-space: nowrap; overflow: hidden; }
+.pline { display: flex; gap: 10px; align-items: flex-end; height: 44px; margin-top: 6px; }
+.pline .l { font-size: 11px; font-weight: 700; color: #8C6C55; line-height: 20px; }
+.pline .u { flex: 1; border-bottom: 1px solid #8C6C55; height: 20px; }
+.psec { margin-top: 26px; height: 30px; border-bottom: 2px solid #2A9D96; color: #2A9D96; font-size: 14px; font-weight: 800; letter-spacing: .08em; line-height: 26px; white-space: nowrap; }
+.pq { margin-top: 16px; }
+.pq .q { font-size: 15px; font-weight: 800; line-height: 21px; height: 21px; white-space: nowrap; overflow: hidden; }
+.pq .h { font-size: 12.5px; color: #8C6C55; line-height: 18px; height: 18px; white-space: nowrap; overflow: hidden; }
+.plines { background: repeating-linear-gradient(to bottom, transparent 0, transparent 33px, #D9CCBA 33px, #D9CCBA 34px); }
+.pnum { position: relative; }
+.pnum span { position: absolute; left: 0; font-size: 13px; font-weight: 700; color: #8C6C55; }
+.pcheck { margin-top: 14px; height: 26px; display: flex; gap: 10px; align-items: center; font-size: 15px; font-weight: 800; white-space: nowrap; }
+.pcheck .bx { width: 18px; height: 18px; border: 1.5px solid #8C6C55; border-radius: 3px; flex: none; }
+.pcheck .o { font-weight: 600; margin-right: 10px; }
+.pfoot { display: flex; justify-content: space-between; font-size: 11px; color: #8C6C55; padding: 0 44px 22px; height: 40px; align-items: flex-end; }
+@media (prefers-reduced-motion: reduce) { .tile { transition: none; } }
+</style>
+
+</head>
+<body>
+<div id="app"></div>
+<div id="layer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+</body>
+</html>
+<script>
+"use strict";
+// ---------- Grundlagen ----------
+const PAL = {
+  tuerkis: ["#2A9D96", "#CDEDE9", "Türkis"], salbei: ["#5E8F62", "#D8E8D2", "Salbei"],
+  pfirsich: ["#C2703D", "#F8DCC6", "Pfirsich"], lavendel: ["#7E62A8", "#E4DBF1", "Lavendel"],
+  rosa: ["#B85C78", "#F5D5DE", "Rosa"], butter: ["#A57F1F", "#F7E8B6", "Butter"],
+  sand: ["#9A7B4F", "#EDE0CB", "Sand"], braun: ["#7A5236", "#E3CDB8", "Braun"],
+};
+const LEGACY = { blue: "salbei", green: "salbei", orange: "pfirsich", purple: "lavendel", pink: "rosa", red: "rosa", teal: "tuerkis", brown: "braun" };
+const colr = n => PAL[LEGACY[n] || n] || PAL.braun;
+const SYM = { graduationcap: "graduation-cap", lightbulb: "lightbulb", "book.closed": "book", "pencil.and.outline": "pencil",
+  briefcase: "briefcase", house: "house", heart: "heart", "person.2": "users", star: "star", leaf: "leaf",
+  paintpalette: "palette", "music.note": "music", "figure.walk": "footprints", cart: "shopping-cart", camera: "camera", globe: "globe" };
+const ICONS = ["graduation-cap", "lightbulb", "book", "pencil", "briefcase", "house", "heart", "users", "star", "leaf", "palette", "music", "globe", "camera"];
+const MODULES = { clients: "Kunden", finance: "Finanzen", writing: "Schreiben" };
+const MOD_ICON = { clients: "users", finance: "euro", writing: "pen-line" };
+const ANAM = [
+  ["anlass", "Anlass & Fragestellung", "Warum kommt das Kind? Wer hat Kontakt aufgenommen? Was soll erreicht werden?"],
+  ["entwicklung", "Entwicklung & Gesundheit", "Motorik, Sprache, Sehen/Hören, Erkrankungen, Medikamente"],
+  ["schule", "Schullaufbahn & Leistungen", "Kindergarten, Einschulung, Noten, Fächer, Lehrkräfte"],
+  ["familie", "Familie & Umfeld", "Familiensituation, Sprachen, Geschwister, Freizeit, Belastungen"],
+  ["lernen", "Lern- & Arbeitsverhalten", "Konzentration, Motivation, Hausaufgaben, Selbstbild"],
+  ["staerken", "Stärken & Interessen", "Was gelingt gut? Hobbys, Ressourcen"],
+  ["bisher", "Bisherige Förderung & Diagnostik", "Therapien, Nachhilfe, Testungen, Nachteilsausgleich"],
+];
+const BEREICHE = ["Lesen", "Rechtschreibung", "Rechnen", "Konzentration", "Lernstrategien", "Motivation & Selbstbild", "Sprache", "Wahrnehmung", "Sozial-emotional", "Organisation"];
+const GOAL_ST = ["Offen", "In Arbeit", "Erreicht"];
+const GOAL_COL = { "Offen": "sand", "In Arbeit": "tuerkis", "Erreicht": "salbei" };
+const CH_ST = ["Idee", "Entwurf", "Überarbeitung", "Fertig"];
+const CAT = { Einnahme: ["Honorar", "Kurs / Workshop", "Verkauf", "Sonstiges"], Ausgabe: ["Material", "Fahrtkosten", "Software & Technik", "Werbung", "Raummiete", "Fortbildung", "Gebühren", "Sonstiges"] };
+
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)).toUpperCase();
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = n => String(n).padStart(2, "0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = () => iso(new Date());
+const addDays = (s, n) => { const d = parseIso(s); d.setDate(d.getDate() + n); return iso(d); };
+const parseIso = s => { const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); return new Date(y, (m || 1) - 1, d || 1); };
+const fmtDay = s => s ? parseIso(s).toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short" }) : "";
+const fmtLong = s => parseIso(s).toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+const fmtDate = s => s ? parseIso(s).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
+const money = v => (Number(v) || 0).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+const dueText = s => { const t = today(); if (s === t) return "Heute"; if (s === addDays(t, 1)) return "Morgen"; if (s === addDays(t, -1)) return "Gestern"; return fmtDay(s); };
+const ic = (n, cls = "") => `<i data-lucide="${n}" class="${cls}"></i>`;
+
+// ---------- Speicher (nur in diesem Browser) ----------
+const KV = {
+  db: null, ok: false,
+  open() {
+    return new Promise(res => {
+      try {
+        const r = indexedDB.open("coworkspace", 1);
+        r.onupgradeneeded = () => r.result.createObjectStore("kv");
+        r.onsuccess = () => { KV.db = r.result; KV.ok = true; res(true); };
+        r.onerror = () => res(false);
+      } catch (e) { res(false); }
+    });
+  },
+  get(k) {
+    return new Promise(res => {
+      if (!KV.db) { try { res(localStorage.getItem("cws." + k)); } catch (e) { res(null); } return; }
+      try { const q = KV.db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result ?? null); q.onerror = () => res(null); }
+      catch (e) { res(null); }
+    });
+  },
+  set(k, v) {
+    return new Promise(res => {
+      if (!KV.db) { try { localStorage.setItem("cws." + k, v); KV.ok = true; res(true); } catch (e) { KV.ok = false; res(false); } return; }
+      try { const tx = KV.db.transaction("kv", "readwrite"); tx.objectStore("kv").put(v, k); tx.oncomplete = () => res(true); tx.onerror = () => res(false); }
+      catch (e) { res(false); }
+    });
+  },
+};
+
+function defaults() {
+  return {
+    version: 1,
+    areas: [
+      { id: uid(), name: "Schule", icon: "graduation-cap", color: "salbei", modules: [] },
+      { id: uid(), name: "Lernanker", icon: "lightbulb", color: "pfirsich", modules: ["clients", "finance"] },
+      { id: uid(), name: "Buch schreiben", icon: "book", color: "lavendel", modules: ["writing"] },
+    ],
+    tasks: [], events: [], notes: {},
+    clients: {}, finance: {}, writing: {},
+    lastExport: null, persisted: false,
+  };
+}
+
+let S = defaults();
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => KV.set("state", JSON.stringify(S)), 350);
+}
+
+let ui = { view: "home", areaId: null, areaTab: "overview", clientId: null, ctab: "einheiten", month: today().slice(0, 7) + "-01", openSessions: {}, showDone: true };
+let draft = { task: { title: "", area: "", due: "today" }, ev: { title: "", date: today(), start: "", end: "", area: "" }, fin: { kind: "Ausgabe", date: today(), amount: "", category: "Material", note: "" }, words: "", chapter: "", client: "" };
+
+// ---------- Bindungen: Eingaben schreiben direkt in die Daten ----------
+let REG = [];
+function B(obj, key, type) { REG.push({ obj, key, type }); return REG.length - 1; }
+const val = x => x == null ? "" : x;
+function inp(obj, key, opts = {}) {
+  const t = opts.type || "text";
+  const i = B(obj, key, t);
+  const htmlType = t === "number" ? "text" : t;
+  const extra = t === "number" ? 'inputmode="decimal"' : "";
+  let v = obj[key];
+  if (t === "number" && v != null && v !== "") v = String(v).replace(".", ",");
+  return `<input class="in" data-b="${i}" type="${htmlType}" ${extra} value="${esc(val(v))}" placeholder="${esc(opts.ph || "")}" ${opts.rr ? "data-rr" : ""} ${opts.attrs || ""}>`;
+}
+function ta(obj, key, ph = "", rows = 3) { const i = B(obj, key, "text"); return `<textarea class="in ta" rows="${rows}" data-b="${i}" placeholder="${esc(ph)}">${esc(val(obj[key]))}</textarea>`; }
+function sel(obj, key, options, rr = true, attrs = "") {
+  const i = B(obj, key, "select");
+  return `<select class="in" data-b="${i}" ${rr ? "data-rr" : ""} ${attrs}>${options.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${String(obj[key] ?? "") === String(v) ? "selected" : ""}>${esc(l)}</option>`; }).join("")}</select>`;
+}
+function chk(obj, key, label) { const i = B(obj, key, "bool"); return `<label class="chk"><input type="checkbox" data-b="${i}" data-rr ${obj[key] ? "checked" : ""}> ${esc(label)}</label>`; }
+function fld(label, control) { return `<label class="field"><span>${esc(label)}</span>${control}</label>`; }
+
+function applyBinding(el) {
+  const r = REG[+el.dataset.b]; if (!r) return;
+  let v;
+  if (r.type === "bool") v = el.checked;
+  else if (r.type === "number") { const s = el.value.replace(/\./g, "").replace(",", ".").trim(); v = s === "" ? null : (isNaN(+s) ? r.obj[r.key] : +s); }
+  else if (r.type === "words") { const n = Math.max(0, parseInt(el.value, 10) || 0); const d = n - (r.obj.words || 0); if (d > 0) logWords(r.obj._aid, d); v = n; }
+  else v = el.value;
+  r.obj[r.key] = v;
+  save();
+}
+document.addEventListener("input", e => { const el = e.target; if (el.dataset && el.dataset.b != null && el.type !== "checkbox" && el.tagName !== "SELECT" && !el.dataset.lazy) applyBinding(el); });
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.b != null) { applyBinding(el); if (el.dataset.rr != null) render(); }
+});
+
+// ---------- Hilfsfunktionen für Daten ----------
+const area = id => S.areas.find(a => a.id === id);
+const areaTasks = aid => S.tasks.filter(t => (t.area || "") === (aid || ""));
+const openTasks = aid => areaTasks(aid).filter(t => !t.done).length;
+const clientsOf = aid => (S.clients[aid] = S.clients[aid] || []);
+const financeOf = aid => (S.finance[aid] = S.finance[aid] || []);
+function writingOf(aid) { if (!S.writing[aid]) S.writing[aid] = { dailyGoal: 500, totalGoal: 60000, chapters: [], log: {} }; return S.writing[aid]; }
+const openAmount = c => (c.sessions || []).filter(s => !s.paid).reduce((a, s) => a + (+s.amount || 0), 0);
+function logWords(aid, n) { const w = writingOf(aid); const k = today(); w.log[k] = (w.log[k] || 0) + n; }
+function streak(w) { let d = today(); if (!(w.log[d] > 0)) d = addDays(d, -1); let n = 0; while (w.log[d] > 0) { n++; d = addDays(d, -1); } return n; }
+function sortTasks(list) {
+  return list.slice().sort((a, b) => (a.done - b.done) || ((a.due || "9999") < (b.due || "9999") ? -1 : (a.due || "9999") > (b.due || "9999") ? 1 : 0) || (b.created || "").localeCompare(a.created || ""));
+}
+function ledger(aid) {
+  const m = financeOf(aid).map(f => ({ ...f, fromSession: false }));
+  const s = clientsOf(aid).flatMap(c => (c.sessions || []).filter(x => x.paid).map(x => ({ id: x.id, date: x.date, kind: "Einnahme", amount: +x.amount || 0, category: "Honorar", note: c.name + (x.topic ? " – " + x.topic : ""), fromSession: true })));
+  return m.concat(s).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+}
+
+// ---------- Darstellung ----------
+let scrollKey = "", scrollPos = 0;
+function render() {
+  REG = [];
+  const main = document.querySelector(".main");
+  const key = ui.view + (ui.areaId || "") + ui.areaTab + (ui.clientId || "");
+  if (main) { scrollPos = key === scrollKey ? main.scrollTop : 0; }
+  scrollKey = key;
+  let body = "";
+  try {
+    if (ui.view === "home") body = vHome();
+    else if (ui.view === "today") body = vToday();
+    else if (ui.view === "calendar") body = vCalendar();
+    else if (ui.view === "data") body = vData();
+    else if (ui.view === "area" && area(ui.areaId)) body = vArea(area(ui.areaId));
+    else { ui.view = "home"; body = vHome(); }
+  } catch (err) { body = `<div class="card"><b>Diese Ansicht konnte nicht angezeigt werden.</b><div class="hint">${esc(err.message)}</div></div>`; console.error(err); }
+  document.getElementById("app").innerHTML = `<div class="shell">${vSide()}<main class="main"><div class="wrap">${body}</div></main></div>`;
+  icons();
+  const m2 = document.querySelector(".main"); if (m2) m2.scrollTop = scrollPos;
+}
+function icons() { try { window.lucide && lucide.createIcons({ attrs: { "stroke-width": 2 } }); } catch (e) {} }
+
+function vSide() {
+  const t = today();
+  const due = S.tasks.filter(x => !x.done && x.due && x.due <= t).length;
+  const nav = (v, icon, label, cnt = "", aid = null) => {
+    const on = ui.view === v && (aid == null || ui.areaId === aid);
+    return `<button class="nav ${on ? "on" : ""}" data-a="go" data-v="${v}" ${aid ? `data-id="${aid}"` : ""}>${icon}<span>${esc(label)}</span>${cnt !== "" && cnt !== 0 ? `<span class="cnt">${cnt}</span>` : ""}</button>`;
+  };
+  return `<nav class="side" aria-label="Navigation">
+    <div class="brand"><span class="dot"></span>Cowork Space</div>
+    ${nav("home", ic("house"), "Start")}
+    <div class="navh">Übersicht</div>
+    ${nav("today", ic("sun"), "Heute", due)}
+    ${nav("calendar", ic("calendar"), "Termine")}
+    <div class="navh">Bereiche</div>
+    ${S.areas.map(a => nav("area", `<span style="color:${colr(a.color)[0]};display:inline-flex">${ic(a.icon)}</span>`, a.name, openTasks(a.id), a.id)).join("")}
+    <div class="navh">App</div>
+    ${nav("data", ic("database"), "Daten & Sicherung")}
+  </nav>`;
+}
+
+function tile(color, icon, title, sub, attrs, footer = "") {
+  const [deep, pastel] = colr(color);
+  return `<button class="tile" style="background:${pastel};border-color:${deep}22" ${attrs}>
+    <span class="ic" style="color:${deep}">${ic(icon)}</span>
+    <span class="tt">${esc(title)}</span><span class="ts">${esc(sub)}</span>${footer}</button>`;
+}
+function pill(text, color) { return `<span class="pill" style="color:${colr(color)[0]}">${esc(text)}</span>`; }
+
+function backupBanner() {
+  const has = S.tasks.length || Object.values(S.clients).some(l => l.length) || S.events.length;
+  if (!has) return "";
+  const days = S.lastExport ? Math.floor((Date.now() - new Date(S.lastExport).getTime()) / 864e5) : null;
+  if (days != null && days < 7) return "";
+  return `<div class="banner">${ic("shield-alert")}<div class="grow"><b>${days == null ? "Noch keine Sicherung" : `Letzte Sicherung vor ${days} Tagen`}</b><div class="small">Deine Daten liegen nur in diesem Browser. Speichere regelmäßig eine Sicherung in iCloud Drive.</div></div><button class="btn pri" data-a="export">${ic("download")}Sicherung speichern</button></div>`;
+}
+
+function vHome() {
+  const t = today();
+  const due = S.tasks.filter(x => !x.done && x.due && x.due <= t).length;
+  const evToday = S.events.filter(e => e.date === t).length;
+  const next = S.events.filter(e => e.date >= t).sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")))[0];
+  const h = new Date().getHours();
+  const greet = h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : h < 22 ? "Guten Abend" : "Gute Nacht";
+  const areaTiles = S.areas.map(a => {
+    const open = openTasks(a.id);
+    const nextT = sortTasks(areaTasks(a.id).filter(x => !x.done))[0];
+    let pills = pill(`${open} offen`, a.color);
+    if (a.modules.includes("clients")) { const o = clientsOf(a.id).reduce((s, c) => s + openAmount(c), 0); if (o > 0) pills += pill(`${money(o)} offen`, a.color); }
+    if (a.modules.includes("writing")) { const w = writingOf(a.id); pills += pill(`${w.log[t] || 0}/${w.dailyGoal} Wörter`, a.color); }
+    return tile(a.color, a.icon, a.name, nextT ? "Als Nächstes: " + nextT.title : "Keine offenen Aufgaben", `data-a="go" data-v="area" data-id="${a.id}"`, `<span class="pills">${pills}</span>`);
+  }).join("");
+  return `
+    <div><div class="eyebrow">${greet}</div><h1 class="h1">${esc(fmtLong(t))}</h1></div>
+    ${!KV.ok ? `<div class="banner">${ic("triangle-alert")}<div class="grow"><b>Speichern ist in diesem Browser nicht möglich.</b><div class="small">Öffne die App in Safari (nicht im privaten Modus). Änderungen gehen sonst beim Schließen verloren.</div></div></div>` : ""}
+    ${backupBanner()}
+    <h2 class="h2">Überblick</h2>
+    <div class="tiles">
+      ${tile("butter", "sun", "Heute", `${due} ${due === 1 ? "Aufgabe" : "Aufgaben"} · ${evToday} ${evToday === 1 ? "Termin" : "Termine"}`, 'data-a="go" data-v="today"')}
+      ${tile("rosa", "calendar", "Termine", next ? `${next.date === t ? "Heute" : fmtDay(next.date)}${next.start ? " " + next.start : ""}: ${next.title}` : "Keine Termine", 'data-a="go" data-v="calendar"')}
+      ${tile("sand", "database", "Daten & Sicherung", S.lastExport ? "Gesichert am " + fmtDate(S.lastExport.slice(0, 10)) : "Noch nicht gesichert", 'data-a="go" data-v="data"')}
+    </div>
+    <h2 class="h2">Bereiche</h2>
+    <div class="tiles">${areaTiles}<button class="tile add" data-a="newArea">${ic("plus")}Bereich hinzufügen</button></div>`;
+}
+
+// ----- Aufgaben -----
+function taskRow(t, showArea = true) {
+  const a = area(t.area);
+  const late = !t.done && t.due && t.due < today();
+  return `<div class="item ${t.done ? "done" : ""}">
+    <button class="check ${t.done ? "done" : ""}" data-a="toggleTask" data-id="${t.id}" aria-label="${t.done ? "Wieder öffnen" : "Erledigt"}">${t.done ? ic("check") : ""}</button>
+    <div class="tx"><div class="t">${esc(t.title)}</div>
+      <div class="meta">${t.due ? `<span class="${late ? "late" : ""}">${ic("calendar", "")} ${esc(dueText(t.due))}</span>` : ""}
+      ${showArea && a ? `<span class="badge" style="background:${colr(a.color)[1]};color:${colr(a.color)[0]}">${esc(a.name)}</span>` : ""}
+      <button class="btn ghost sm" data-a="moveDue" data-id="${t.id}">${t.due ? "Verschieben" : "Datum"}</button></div></div>
+    <button class="iconbtn" data-a="delTask" data-id="${t.id}" aria-label="Löschen">${ic("trash-2")}</button></div>`;
+}
+function quickAdd(fixedArea) {
+  const d = draft.task;
+  return `<form class="row" data-form="addTask" ${fixedArea ? `data-area="${fixedArea}"` : ""}>
+    <div class="grow" style="min-width:200px">${inp(d, "title", { ph: "Neue Aufgabe …", attrs: 'id="newtask"' })}</div>
+    ${fixedArea ? "" : sel(d, "area", [["", "Kein Bereich"], ...S.areas.map(a => [a.id, a.name])], false)}
+    ${sel(d, "due", [["none", "Ohne Datum"], ["today", "Heute"], ["tomorrow", "Morgen"], ["week", "Nächste Woche"]], false)}
+    <button class="btn pri" type="submit">${ic("plus")}Hinzufügen</button></form>`;
+}
+function taskList(list, showArea, empty) {
+  return list.length ? `<div class="list">${list.map(t => taskRow(t, showArea)).join("")}</div>` : `<div class="hint">${esc(empty)}</div>`;
+}
+
+function vToday() {
+  const t = today();
+  const list = sortTasks(S.tasks.filter(x => x.due && (x.due <= t && !x.done || x.done && x.doneAt === t)));
+  const evs = S.events.filter(e => e.date === t).sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+  const evsT = S.events.filter(e => e.date === addDays(t, 1));
+  const wa = S.areas.filter(a => a.modules.includes("writing"));
+  draft.task.due = draft.task.due || "today";
+  return `<div><div class="eyebrow">Heute</div><h1 class="h1">${esc(fmtLong(t))}</h1></div>
+    ${quickAdd()}
+    <div class="cols"><div class="card"><div class="ct">${ic("list-checks")}Aufgaben für heute</div>${taskList(list, true, "Nichts fällig – schön!")}</div>
+    <div class="stack">
+      <div class="card"><div class="ct">${ic("calendar")}Termine heute</div>${evs.length ? evs.map(evRow).join("") : '<div class="hint">Keine Termine heute.</div>'}
+        ${evsT.length ? `<div class="dayh">Morgen</div>${evsT.map(evRow).join("")}` : ""}</div>
+      ${wa.map(a => { const w = writingOf(a.id); const n = w.log[t] || 0; const pct = Math.min(100, n / Math.max(1, w.dailyGoal) * 100);
+        return `<div class="card" style="cursor:pointer" data-a="go" data-v="area" data-id="${a.id}" data-tab="writing"><div class="ct">${ic("pen-line")}Schreiben heute<span class="sp small muted">${streak(w) ? "🔥 " + streak(w) : ""}</span></div>
+        <div>${n} / ${w.dailyGoal} Wörter</div><div style="height:8px;border-radius:9px;background:${colr(a.color)[1]}"><div style="height:100%;width:${pct}%;border-radius:9px;background:${pct >= 100 ? "var(--ok)" : colr(a.color)[0]}"></div></div></div>`; }).join("")}
+    </div></div>`;
+}
+
+// ----- Termine -----
+function evRow(e, showDay = false) {
+  const a = area(e.area);
+  const c = a ? colr(a.color)[0] : "var(--tq)";
+  return `<div class="ev"><span class="bar" style="background:${c}"></span><div class="grow"><div style="font-weight:700">${esc(e.title)}</div>
+    <div class="meta">${showDay ? esc(fmtDay(e.date)) + " · " : ""}${e.start ? esc(e.start) + (e.end ? "–" + esc(e.end) : "") : "ganztägig"}${e.place ? " · " + esc(e.place) : ""}
+    ${a ? `<span class="badge" style="background:${colr(a.color)[1]};color:${c}">${esc(a.name)}</span>` : ""}</div></div>
+    <button class="iconbtn" data-a="delEvent" data-id="${e.id}" aria-label="Termin löschen">${ic("trash-2")}</button></div>`;
+}
+function vCalendar() {
+  const t = today();
+  const d = draft.ev;
+  const up = S.events.filter(e => e.date >= addDays(t, -7)).sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")));
+  const days = [...new Set(up.map(e => e.date))];
+  return `<div><div class="eyebrow">Termine</div><h1 class="h1">Kalender</h1></div>
+    <div class="card"><div class="ct">${ic("calendar-plus")}Neuer Termin</div>
+      <form class="fgrid" data-form="addEvent">
+        ${fld("Titel", inp(d, "title", { ph: "z. B. Lernanker: Erstgespräch" }))}
+        ${fld("Datum", inp(d, "date", { type: "date" }))}
+        ${fld("Beginn", inp(d, "start", { type: "time" }))}
+        ${fld("Ende", inp(d, "end", { type: "time" }))}
+        ${fld("Ort", inp(d, "place", { ph: "optional" }))}
+        ${fld("Bereich", sel(d, "area", [["", "Kein Bereich"], ...S.areas.map(a => [a.id, a.name])], false))}
+        <div class="field" style="justify-content:flex-end"><button class="btn pri" type="submit">${ic("plus")}Eintragen</button></div>
+      </form>
+      <div class="hint small">Diese Termine liegen nur in der Web-App. Deinen Apple-Kalender siehst du weiter in der Kalender-App.</div></div>
+    <div class="card"><div class="ct">${ic("calendar")}Anstehend</div>
+      ${days.length ? days.map(day => `<div class="dayh">${day === t ? "Heute – " : day === addDays(t, 1) ? "Morgen – " : ""}${esc(fmtLong(day))}</div>${up.filter(e => e.date === day).map(e => evRow(e)).join("")}`).join("") : '<div class="hint">Noch keine Termine.</div>'}</div>`;
+}
+
+// ----- Bereich -----
+function vArea(a) {
+  const [deep, pastel] = colr(a.color);
+  const tabs = [["overview", "Übersicht", "layout-grid"], ...a.modules.filter(m => MODULES[m]).map(m => [m, MODULES[m], MOD_ICON[m]])];
+  if (!tabs.some(t => t[0] === ui.areaTab)) ui.areaTab = "overview";
+  let content = "";
+  if (ui.areaTab === "clients") content = vClients(a);
+  else if (ui.areaTab === "finance") content = vFinance(a);
+  else if (ui.areaTab === "writing") content = vWriting(a);
+  else {
+    const list = sortTasks(areaTasks(a.id).filter(t => ui.showDone || !t.done || t.doneAt === today()));
+    const evs = S.events.filter(e => e.area === a.id && e.date >= today()).sort((x, y) => (x.date + (x.start || "")).localeCompare(y.date + (y.start || ""))).slice(0, 8);
+    content = `<div class="cols"><div class="card"><div class="ct">${ic("list-checks")}Aufgaben</div>${quickAdd(a.id)}${taskList(list, false, "Noch keine Aufgaben in diesem Bereich.")}</div>
+      <div class="stack"><div class="card"><div class="ct">${ic("calendar")}Termine</div>${evs.length ? evs.map(e => evRow(e, true)).join("") : '<div class="hint">Keine Termine in diesem Bereich.</div>'}</div>
+      <div class="card"><div class="ct">${ic("notebook-pen")}Notizen</div>${ta(S.notes, a.id, "Gedanken, Ideen, Links …", 8)}</div></div></div>`;
+  }
+  return `<div class="row"><span style="width:58px;height:58px;border-radius:16px;background:${pastel};color:${deep};display:grid;place-items:center">${ic(a.icon)}</span>
+      <h1 class="h1 grow">${esc(a.name)}</h1><button class="btn" data-a="editArea" data-id="${a.id}">${ic("sliders-horizontal")}Bearbeiten</button></div>
+    ${tabs.length > 1 ? `<div class="tabs">${tabs.map(([k, l, i]) => `<button class="tab ${ui.areaTab === k ? "on" : ""}" data-a="areaTab" data-v="${k}">${ic(i)}${l}</button>`).join("")}</div>` : ""}
+    ${content}`;
+}
+
+// ----- Kunden / Kartei -----
+function vClients(a) {
+  const list = clientsOf(a.id).slice().sort((x, y) => x.name.localeCompare(y.name, "de"));
+  if (!list.some(c => c.id === ui.clientId)) ui.clientId = (list.find(c => c.active !== false) || list[0] || {}).id || null;
+  const c = list.find(x => x.id === ui.clientId);
+  return `<div class="split">
+    <div class="card"><div class="ct">${ic("users")}Kunden</div>
+      <div class="clist">${list.length ? list.map(x => `<button class="${x.id === ui.clientId ? "on" : ""}" data-a="pickClient" data-id="${x.id}" style="${x.active === false ? "opacity:.55" : ""}">${esc(x.name)}${openAmount(x) > 0 ? `<span class="r">${money(openAmount(x))}</span>` : ""}</button>`).join("") : '<div class="hint">Noch keine Kunden.</div>'}</div>
+      <form class="row" data-form="addClient"><div class="grow">${inp(draft, "client", { ph: "Neuer Kunde …" })}</div><button class="btn" type="submit">${ic("plus")}</button></form>
+    </div>
+    <div class="stack">${c ? vClient(a, c) : `<div class="card"><div class="hint">Lege links einen Kunden an. Jede Kartei hat Stammdaten, Anamnese mit Bogen zum Handschreiben, Befunde, Förderplan und Einheiten.</div></div>`}</div>
+  </div>`;
+}
+function vClient(a, c) {
+  const tabs = [["stamm", "Stammdaten", "id-card"], ["anamnese", "Anamnese", "clipboard-list"], ["befunde", "Befunde", "file-search"], ["plan", "Förderplan", "target"], ["einheiten", "Einheiten", "clock"]];
+  let body = "";
+  if (ui.ctab === "stamm") body = cStamm(a, c);
+  else if (ui.ctab === "anamnese") body = cAnam(c);
+  else if (ui.ctab === "befunde") body = cBefunde(c);
+  else if (ui.ctab === "plan") body = cPlan(a, c);
+  else body = cEinheiten(a, c);
+  const age = c.birthday ? Math.floor((Date.now() - parseIso(c.birthday).getTime()) / 31557600000) : null;
+  return `<div class="row"><h2 class="h1 grow" style="font-size:26px">${esc(c.name)}</h2>${age != null ? `<span class="muted">${age} Jahre</span>` : ""}${c.school ? pill(c.school, a.color) : ""}</div>
+    <div class="tabs">${tabs.map(([k, l, i]) => `<button class="tab ${ui.ctab === k ? "on" : ""}" data-a="ctab" data-v="${k}">${ic(i)}${l}</button>`).join("")}</div>${body}`;
+}
+function cStamm(a, c) {
+  return `<div class="card"><div class="ct">${ic("id-card")}Stammdaten</div><div class="fgrid">
+    ${fld("Name", inp(c, "name"))}${fld("Geburtsdatum", inp(c, "birthday", { type: "date" }))}
+    ${fld("Schule / Klasse", inp(c, "school", { ph: "z. B. VS Musterort, 3b" }))}${fld("Erziehungsberechtigte", inp(c, "guardian"))}
+    ${fld("E-Mail", inp(c, "email", { type: "email" }))}${fld("Telefon", inp(c, "phone", { type: "tel" }))}
+    ${fld("Beginn", inp(c, "startDate", { type: "date" }))}${fld("Stundensatz (€)", inp(c, "rate", { type: "number" }))}</div>
+    ${chk(c, "active", "Aktiv")}
+    ${fld("Notizen", ta(c, "notes", "", 4))}
+    <div class="row"><span class="grow"></span><button class="btn danger sm" data-a="delClient" data-id="${c.id}">${ic("trash-2")}Kartei löschen</button></div></div>`;
+}
+function sheetList(c, kind) {
+  const list = (c.sheets || []).filter(s => s.kind === kind).sort((x, y) => y.date.localeCompare(x.date));
+  return list.map(s => `<div class="item"><span style="color:var(--tq)">${ic(kind === "anamnese" ? "clipboard-pen" : "notebook-pen")}</span><div class="tx"><div class="t">${esc(s.title)}</div><div class="meta">${esc(fmtDate(s.date))} · ${(s.strokes || []).length} Striche</div></div>
+    <button class="btn sm" data-a="openSheet" data-id="${s.id}">${ic("pencil")}Öffnen</button><button class="iconbtn" data-a="delSheet" data-id="${s.id}" aria-label="Löschen">${ic("trash-2")}</button></div>`).join("");
+}
+function cAnam(c) {
+  c.anamnesis = c.anamnesis || {};
+  return `<div class="card"><div class="ct">${ic("pencil-line")}Anamnesebogen zum Handschreiben<span class="sp"><button class="btn pri" data-a="newSheet" data-v="anamnese">${ic("plus")}Neuer Bogen</button></span></div>
+      <div class="hint">Der Bogen „Erstgespräch“ mit Schreiblinien – ausfüllen mit dem Apple Pencil. Mit dem Finger blätterst du, mit dem Stift schreibst du.</div>
+      <div class="list">${sheetList(c, "anamnese") || ""}</div></div>
+    <div class="card"><div class="ct">${ic("clipboard-list")}Anamnese (getippt)</div>
+      ${ANAM.map(([k, t, h]) => fld(t, ta(c.anamnesis, k, h, 3))).join("")}</div>`;
+}
+function cBefunde(c) {
+  c.findings = c.findings || [];
+  const list = c.findings.slice().sort((x, y) => (y.date || "").localeCompare(x.date || ""));
+  return `<div class="card"><div class="ct">${ic("file-search")}Befunde & Diagnostik<span class="sp"><button class="btn pri" data-a="addFinding">${ic("plus")}Befund</button></span></div>
+    <div class="hint">Testergebnisse, Gutachten, Arztbriefe, eigene Diagnostik.</div>
+    ${list.length ? list.map(f => `<div class="sub"><div class="fgrid">${fld("Datum", inp(f, "date", { type: "date" }))}${fld("Titel / Verfahren", inp(f, "title", { ph: "z. B. SLRT-II, HSP" }))}${fld("Quelle", inp(f, "source", { ph: "z. B. Schulpsychologie" }))}</div>
+      ${fld("Ergebnisse", ta(f, "result", "", 3))}${fld("Einschätzung / Konsequenzen", ta(f, "interpretation", "", 2))}
+      <div class="row"><span class="grow"></span><button class="btn danger sm" data-a="delFinding" data-id="${f.id}">${ic("trash-2")}Löschen</button></div></div>`).join("") : '<div class="hint">Noch keine Befunde.</div>'}</div>`;
+}
+function cPlan(a, c) {
+  c.goals = c.goals || [];
+  const cnt = s => c.goals.filter(g => g.status === s).length;
+  return `<div class="card"><div class="ct">${ic("target")}Förderplan<span class="sp"><button class="btn pri" data-a="addGoal">${ic("plus")}Ziel</button></span></div>
+    <div class="row">${GOAL_ST.map(s => pill(cnt(s) + " " + s.toLowerCase(), GOAL_COL[s])).join("")}<span class="grow"></span><label class="row small muted">Überprüfung am ${inp(c, "planReview", { type: "date" })}</label></div>
+    <datalist id="bereiche">${BEREICHE.map(b => `<option value="${esc(b)}">`).join("")}</datalist>
+    ${c.goals.length ? c.goals.map(g => { const n = (c.sessions || []).filter(s => (s.goalIDs || []).includes(g.id)).length;
+      return `<div class="sub" style="border-left:5px solid ${colr(GOAL_COL[g.status] || "sand")[0]}">
+        <div class="fgrid">${fld("Förderbereich", inp(g, "domain", { attrs: 'list="bereiche"' }))}${fld("Status", sel(g, "status", GOAL_ST))}${fld("Zieldatum", inp(g, "targetDate", { type: "date" }))}</div>
+        ${fld("Ziel (konkret, überprüfbar)", ta(g, "goal", "z. B. Liest zweisilbige Wörter flüssig", 2))}${fld("Maßnahmen, Methoden, Material", ta(g, "measures", "", 2))}
+        ${fld("Überprüfung / Ergebnis", ta(g, "evaluation", "", 2))}
+        <div class="row small muted">${ic("clock")} ${n}× in Einheiten bearbeitet<span class="grow"></span><button class="btn danger sm" data-a="delGoal" data-id="${g.id}">${ic("trash-2")}Löschen</button></div></div>`; }).join("") : '<div class="hint">Noch keine Förderziele.</div>'}</div>`;
+}
+function cEinheiten(a, c) {
+  c.sessions = c.sessions || [];
+  const list = c.sessions.slice().sort((x, y) => (y.date || "").localeCompare(x.date || ""));
+  const hours = c.sessions.reduce((s, x) => s + (+x.minutes || 0), 0) / 60;
+  const open = openAmount(c);
+  return `<div class="card"><div class="ct">${ic("clock")}Coaching-Einheiten<span class="sp"><button class="btn pri" data-a="addSession">${ic("plus")}Einheit</button></span></div>
+    <div class="row">${pill(c.sessions.length + " Einheiten", a.color)}${pill(hours.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " Std.", a.color)}${open > 0 ? pill("offen: " + money(open), "rosa") : ""}
+      <span class="grow"></span>${open > 0 ? `<button class="btn sm" data-a="allPaid">Alle als bezahlt</button>` : ""}</div>
+    ${list.length ? list.map(s => sessionCard(c, s)).join("") : '<div class="hint">Noch keine Einheiten.</div>'}</div>`;
+}
+function sessionCard(c, s) {
+  const isOpen = ui.openSessions[s.id];
+  const goals = (c.goals || []).filter(g => (s.goalIDs || []).includes(g.id));
+  const note = (c.sheets || []).find(x => x.sessionId === s.id);
+  const head = `<div class="hd"><b>${esc(fmtLong(s.date))}</b><span class="muted">· ${s.minutes || 0} Min.</span><span class="grow"></span>
+    <span class="badge" style="background:${colr(s.paid ? "salbei" : "rosa")[1]};color:${colr(s.paid ? "salbei" : "rosa")[0]}">${s.paid ? "bezahlt" : "offen"} · ${money(s.amount)}</span>
+    <button class="btn sm" data-a="toggleSession" data-id="${s.id}">${isOpen ? "Schließen" : "Bearbeiten"}</button></div>`;
+  if (!isOpen) {
+    return `<div class="sub">${head}${s.topic ? `<div style="font-weight:700">${esc(s.topic)}</div>` : ""}
+      ${goals.length ? `<div class="pills">${goals.map(g => pill(g.domain || g.goal.slice(0, 24), "tuerkis")).join("")}</div>` : ""}
+      ${["content:Inhalte", "notes:Beobachtungen", "nextSteps:Nächste Schritte"].map(p => { const [k, l] = p.split(":"); return s[k] ? `<div class="small"><b>${l}:</b> ${esc(s[k])}</div>` : ""; }).join("")}
+      ${note ? `<div><button class="btn sm" data-a="openSheet" data-id="${note.id}">${ic("notebook-pen")}Handschriftliche Notiz</button></div>` : ""}</div>`;
+  }
+  return `<div class="sub">${head}
+    <div class="fgrid">${fld("Datum", inp(s, "date", { type: "date", rr: true }))}${fld("Dauer", sel(s, "minutes", [30, 45, 50, 60, 90, 120].map(m => [m, m + " Minuten"])))}${fld("Thema", inp(s, "topic"))}</div>
+    ${(c.goals || []).length ? `<div class="field"><span>Bearbeitete Förderziele</span><div class="pills">${c.goals.filter(g => g.status !== "Erreicht" || (s.goalIDs || []).includes(g.id)).map(g => { const on = (s.goalIDs || []).includes(g.id); return `<button class="btn sm" style="${on ? "background:var(--tq-pastel);border-color:var(--tq)" : ""}" data-a="toggleGoal" data-id="${s.id}" data-v="${g.id}">${on ? ic("check") : ""}${esc((g.domain ? g.domain + ": " : "") + (g.goal || "").slice(0, 40))}</button>`; }).join("")}</div></div>` : ""}
+    ${fld("Inhalte & Methoden", ta(s, "content", "", 2))}${fld("Beobachtungen", ta(s, "notes", "", 2))}${fld("Hausaufgaben / nächste Schritte", ta(s, "nextSteps", "", 2))}
+    <div class="row"><div style="width:140px">${fld("Betrag (€)", inp(s, "amount", { type: "number" }))}</div>${chk(s, "paid", "Bezahlt")}<span class="grow"></span>
+      <button class="btn" data-a="sessionNote" data-id="${s.id}">${ic("pencil-line")}${note ? "Handschriftliche Notiz" : "Notiz mit dem Stift"}</button>
+      <button class="btn danger sm" data-a="delSession" data-id="${s.id}">${ic("trash-2")}</button></div></div>`;
+}
+
+// ----- Finanzen -----
+function vFinance(a) {
+  const L = ledger(a.id);
+  const m = ui.month.slice(0, 7);
+  const items = L.filter(x => (x.date || "").slice(0, 7) === m);
+  const inc = items.filter(x => x.kind === "Einnahme").reduce((s, x) => s + (+x.amount || 0), 0);
+  const exp = items.filter(x => x.kind === "Ausgabe").reduce((s, x) => s + (+x.amount || 0), 0);
+  const open = clientsOf(a.id).reduce((s, c) => s + openAmount(c), 0);
+  const y = m.slice(0, 4);
+  const months = Array.from({ length: 12 }, (_, i) => { const k = `${y}-${pad(i + 1)}`; const it = L.filter(x => (x.date || "").slice(0, 7) === k);
+    return { k, i: it.filter(x => x.kind === "Einnahme").reduce((s, x) => s + (+x.amount || 0), 0), e: it.filter(x => x.kind === "Ausgabe").reduce((s, x) => s + (+x.amount || 0), 0) }; });
+  const max = Math.max(1, ...months.map(x => Math.max(x.i, x.e)));
+  const d = draft.fin;
+  if (!CAT[d.kind].includes(d.category)) d.category = CAT[d.kind][0];
+  const mLabel = parseIso(ui.month).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  return `<div class="row"><button class="iconbtn" data-a="month" data-v="-1" aria-label="Vorheriger Monat">${ic("chevron-left")}</button>
+      <h2 class="h1" style="font-size:24px;min-width:200px;text-align:center">${esc(mLabel)}</h2>
+      <button class="iconbtn" data-a="month" data-v="1" aria-label="Nächster Monat">${ic("chevron-right")}</button><span class="grow"></span>
+      <button class="btn" data-a="csv">${ic("download")}${y} als CSV</button></div>
+    <div class="stats">
+      <div class="stat" style="background:${colr("salbei")[1]}"><span class="l" style="color:${colr("salbei")[0]}">Einnahmen</span><span class="v">${money(inc)}</span></div>
+      <div class="stat" style="background:${colr("rosa")[1]}"><span class="l" style="color:${colr("rosa")[0]}">Ausgaben</span><span class="v">${money(exp)}</span></div>
+      <div class="stat" style="background:${colr("tuerkis")[1]}"><span class="l" style="color:${colr("tuerkis")[0]}">Ergebnis</span><span class="v">${money(inc - exp)}</span></div>
+      <div class="stat" style="background:${colr("butter")[1]}"><span class="l" style="color:${colr("butter")[0]}">Noch offen</span><span class="v">${money(open)}</span></div></div>
+    <div class="card"><div class="ct">${ic("chart-column")}Jahr ${y}<span class="sp small muted"><span style="color:${colr("salbei")[0]}">■</span> Einnahmen <span style="color:${colr("rosa")[0]}">■</span> Ausgaben</span></div>
+      <div class="bars">${months.map((x, i) => `<div class="b"><div style="display:flex;gap:2px;align-items:flex-end;height:110px;width:100%;justify-content:center"><i style="height:${x.i / max * 100}%;background:${colr("salbei")[0]}" title="${money(x.i)}"></i><i style="height:${x.e / max * 100}%;background:${colr("rosa")[0]}" title="${money(x.e)}"></i></div>${"JFMAMJJASOND"[i]}</div>`).join("")}</div></div>
+    <div class="card"><div class="ct">${ic("circle-plus")}Buchen</div>
+      <form class="fgrid" data-form="addFin">${fld("Art", sel(d, "kind", ["Ausgabe", "Einnahme"]))}${fld("Datum", inp(d, "date", { type: "date" }))}${fld("Betrag (€)", inp(d, "amount", { type: "number", ph: "0,00" }))}
+        ${fld("Kategorie", sel(d, "category", CAT[d.kind], false))}${fld("Notiz", inp(d, "note", { ph: "z. B. Rechnungsnr." }))}
+        <div class="field" style="justify-content:flex-end"><button class="btn pri" type="submit">${ic("check")}Buchen</button></div></form></div>
+    <div class="card"><div class="ct">${ic("list")}Posten im ${esc(parseIso(ui.month).toLocaleDateString("de-DE", { month: "long" }))}</div>
+      ${items.length ? `<div class="list">${items.map(x => `<div class="item"><span class="num muted" style="width:52px">${esc(fmtDate(x.date).slice(0, 6))}</span>
+        <span style="color:${x.kind === "Einnahme" ? colr("salbei")[0] : colr("rosa")[0]}">${ic(x.fromSession ? "user" : x.kind === "Einnahme" ? "arrow-down-left" : "arrow-up-right")}</span>
+        <div class="tx"><div class="t">${esc(x.category)}</div>${x.note ? `<div class="meta">${esc(x.note)}</div>` : ""}</div>
+        <b class="num" style="color:${x.kind === "Einnahme" ? colr("salbei")[0] : colr("rosa")[0]}">${x.kind === "Einnahme" ? "+" : "−"} ${money(x.amount)}</b>
+        ${x.fromSession ? `<span class="iconbtn" title="Aus einer bezahlten Einheit">${ic("lock")}</span>` : `<button class="iconbtn" data-a="delFin" data-id="${x.id}" aria-label="Löschen">${ic("trash-2")}</button>`}</div>`).join("")}</div>` : '<div class="hint">Keine Posten in diesem Monat.</div>'}</div>`;
+}
+
+// ----- Schreiben -----
+function vWriting(a) {
+  const w = writingOf(a.id);
+  const t = today();
+  const n = w.log[t] || 0;
+  const total = w.chapters.reduce((s, c) => s + (+c.words || 0), 0);
+  const days = Array.from({ length: 14 }, (_, i) => addDays(t, i - 13));
+  const max = Math.max(w.dailyGoal, ...days.map(d => w.log[d] || 0), 1);
+  const [deep, pastel] = colr(a.color);
+  w.chapters.forEach(c => { Object.defineProperty(c, "_aid", { value: a.id, enumerable: false, configurable: true }); });
+  return `<div class="stats">
+      <div class="stat" style="background:${pastel}"><span class="l" style="color:${deep}">Heute</span><span class="v">${n} / ${w.dailyGoal}</span><span class="small">${n >= w.dailyGoal ? "Tagesziel erreicht 🎉" : `Noch ${w.dailyGoal - n} Wörter`}</span></div>
+      <div class="stat" style="background:${colr("pfirsich")[1]}"><span class="l" style="color:${colr("pfirsich")[0]}">Serie</span><span class="v">${streak(w)} ${streak(w) === 1 ? "Tag" : "Tage"}</span></div>
+      <div class="stat" style="background:${colr("tuerkis")[1]}"><span class="l" style="color:${colr("tuerkis")[0]}">Manuskript</span><span class="v">${total.toLocaleString("de-DE")}</span><span class="small">von ${(+w.totalGoal || 0).toLocaleString("de-DE")} Wörtern</span></div></div>
+    <div class="cols"><div class="stack">
+      <div class="card"><div class="ct">${ic("pen-line")}Geschrieben</div><form class="row" data-form="logWords"><div style="width:140px">${inp(draft, "words", { type: "number", ph: "Wörter" })}</div><button class="btn pri" type="submit">Eintragen</button><span class="hint">Oder unten die Wortzahl eines Kapitels erhöhen.</span></form></div>
+      <div class="card"><div class="ct">${ic("list-ordered")}Kapitel</div>
+        ${w.chapters.length ? `<div class="list">${w.chapters.map((c, i) => { const wi = B(c, "words", "words"); return `<div class="item" style="align-items:center"><span class="muted num" style="width:22px">${i + 1}.</span><div class="grow">${inp(c, "title")}</div><div style="width:150px">${sel(c, "status", CH_ST, false)}</div>
+          <input class="in num" style="width:100px" inputmode="numeric" data-b="${wi}" data-lazy data-rr value="${+c.words || 0}" aria-label="Wörter"><button class="iconbtn" data-a="delChapter" data-v="${i}" aria-label="Kapitel löschen">${ic("trash-2")}</button></div>`; }).join("")}</div>` : '<div class="hint">Noch keine Kapitel.</div>'}
+        <form class="row" data-form="addChapter"><div class="grow">${inp(draft, "chapter", { ph: "Neues Kapitel …" })}</div><button class="btn" type="submit">${ic("plus")}Hinzufügen</button></form></div>
+    </div><div class="stack">
+      <div class="card"><div class="ct">${ic("chart-column")}Letzte 14 Tage</div><div class="bars">${days.map(d => { const v = w.log[d] || 0; return `<div class="b"><i style="height:${v / max * 100}%;background:${v >= w.dailyGoal ? "var(--ok)" : deep}" title="${v} Wörter"></i>${parseIso(d).getDate()}</div>`; }).join("")}</div></div>
+      <div class="card"><div class="ct">${ic("target")}Ziele</div><div class="fgrid">${fld("Tagesziel (Wörter)", inp(w, "dailyGoal", { type: "number", rr: true }))}${fld("Gesamtziel (Wörter)", inp(w, "totalGoal", { type: "number", rr: true }))}</div></div>
+    </div></div>`;
+}
+
+// ----- Daten & Sicherung -----
+function vData() {
+  const counts = { tasks: S.tasks.length, events: S.events.length, clients: Object.values(S.clients).reduce((s, l) => s + l.length, 0) };
+  return `<div><div class="eyebrow">App</div><h1 class="h1">Daten & Sicherung</h1></div>
+    <div class="card"><div class="ct">${ic("hard-drive")}Wo liegen meine Daten?</div>
+      <div>Alles, was du hier einträgst, liegt <b>nur in diesem Browser auf diesem Gerät</b> – nicht im Internet und nicht bei Claude. Gerade bei den Karteien der Kinder ist das gut für den Datenschutz.</div>
+      <div class="hint">Das heißt aber auch: Löschst du die Website-Daten von Safari, sind die Einträge weg. Speichere deshalb regelmäßig eine Sicherung in iCloud Drive.</div>
+      <div class="row">${pill(counts.tasks + " Aufgaben", "tuerkis")}${pill(counts.events + " Termine", "rosa")}${pill(counts.clients + " Karteien", "pfirsich")}
+        ${pill(KV.ok ? "Speichern aktiv" : "Speichern nicht möglich", KV.ok ? "salbei" : "rosa")}${pill(S.persisted ? "Dauerhaft gespeichert" : "Nicht als dauerhaft markiert", S.persisted ? "salbei" : "butter")}</div>
+      ${S.persisted ? "" : `<div><button class="btn" data-a="persist">${ic("lock")}Dauerhaft speichern anfragen</button></div>`}</div>
+    <div class="card"><div class="ct">${ic("download")}Sicherung</div>
+      <div class="hint">Speichert alles in einer Datei. Auf dem iPad wählst du dann „In Dateien sichern“ › iCloud Drive › Cowork Space.</div>
+      <div class="row"><button class="btn pri" data-a="export">${ic("download")}Sicherung speichern</button>
+        <label class="btn">${ic("upload")}Sicherung laden<input type="file" accept=".json,application/json" data-file="backup" hidden></label>
+        <span class="hint">${S.lastExport ? "Zuletzt gesichert: " + fmtDate(S.lastExport.slice(0, 10)) : "Noch nie gesichert"}</span></div>
+      </div>
+    <div class="card"><div class="ct">${ic("laptop")}Daten vom Mac übernehmen</div>
+      <div>Wähle in iCloud Drive › Cowork Space › Daten die beiden Dateien <b>bereiche.json</b> und <b>module.json</b> (beide gleichzeitig markieren).</div>
+      <div class="hint">Übernommen werden Bereiche, Kundenkarteien (Stammdaten, Anamnese, Befunde, Förderplan, Einheiten), Finanzen und das Schreibziel. Handschriftliche Bögen aus der Web-App bleiben erhalten. Aufgaben und Termine aus Erinnerungen und Kalender kann eine Web-App nicht lesen.</div>
+      <div><label class="btn">${ic("upload")}Mac-Dateien wählen<input type="file" accept=".json,application/json" multiple data-file="mac" hidden></label></div></div>`;
+}
+
+// ---------- Anamnesebogen & Notizblatt (Apple Pencil) ----------
+const FORM = [
+  ["sec", "Anliegen"],
+  ["q", ["Warum sind wir heute hier?"], null, 4],
+  ["q", ["Wichtige / präsente Themen"], "z. B. Eifersucht? Warten aushalten? Wutanfälle? Grenzen akzeptieren?", 4],
+  ["q", ["Seit wann besteht das Problem?"], null, 2],
+  ["q", ["Wie gehen Sie mit dem Problem um? Welche Lösungsansätze haben Sie", "versucht und wie war der Erfolg dabei?"], null, 4],
+  ["q", ["Welche anderen Fördermaßnahmen hat es bereits gegeben?"], "Therapie, Psychologie, Ergotherapie oder Logopädie", 3],
+  ["q", ["Welche Hilfe erwarten Sie von uns?"], null, 3],
+  ["sec", "Soziales Umfeld"],
+  ["q", ["Wie ist das Sozialverhalten in Schule / Kindergarten und im Freizeitbereich?"], null, 3],
+  ["chk", "Schule / Kindergarten kontaktieren – Erlaubnis", ["ja", "nein"]],
+  ["q", ["Ansprechperson / Kontakt Schule bzw. Kindergarten"], null, 1],
+  ["q", ["Ist das Kind lieber alleine oder spielt es mit anderen zusammen?"], null, 2],
+  ["q", ["Freunde?"], null, 2],
+  ["sec", "Familie"],
+  ["q", ["Familiensituation und Geschwister"], null, 3],
+  ["q", ["Gewohnheiten und Rituale in der Familie"], null, 3],
+  ["sec", "Das Kind"],
+  ["q", ["Was kann Ihr Kind besonders gut?"], null, 3],
+  ["num", "3–5 Eigenschaften des Kindes", 5],
+  ["q", ["Energielevel und Schlafverhalten"], null, 3],
+  ["q", ["Selbstständigkeit"], null, 2],
+  ["q", ["Emotionales Wohlbefinden"], "Traurigkeit?", 3],
+  ["q", ["Lieblingsspiele und Interessen"], null, 2],
+  ["sec", "Organisatorisches zum Schluss"],
+  ["chk", "Einreichen nicht möglich – besprochen", [""]],
+  ["chk", "Kosten besprochen: Gruppe 40 € für 50 Minuten; 75 € für 50 Minuten", [""]],
+  ["sec", "Für uns: Gesprächshinweise & Beobachtung"],
+  ["q", ["Darf die Mama oder der Papa mitkommen? Dann mal Eltern reden lassen."], "„Super, dann borge ich mir jetzt Mama und Papa aus.“", 2],
+  ["q", ["Beobachtung: Interaktion zwischen Elternteil und Kind"], null, 5],
+  ["q", ["Weitere Notizen"], null, 6],
+];
+function paperHTML(sheet, c) {
+  const head = `<div class="pband"><div class="e">LERNANKER</div><div class="t">${sheet.kind === "anamnese" ? "Anamnesebogen · Erstgespräch" : "Notizen"}</div></div>`;
+  const fields = `<div class="pfields"><div class="pf" style="flex:46"><div class="l">${sheet.kind === "anamnese" ? "Name des Kindes" : "Name"}</div><div class="v">${esc(c.name)}</div></div>
+    <div class="pf" style="flex:24"><div class="l">Geburtsdatum</div><div class="v">${esc(fmtDate(c.birthday))}</div></div>
+    <div class="pf" style="flex:24"><div class="l">Datum</div><div class="v">${esc(fmtDate(sheet.date))}</div></div></div>`;
+  let body = "";
+  if (sheet.kind === "anamnese") {
+    body = `<div class="pline"><span class="l">Anwesend</span><span class="u"></span></div>` + FORM.map(b => {
+      if (b[0] === "sec") return `<div class="psec">${esc(b[1].toUpperCase())}</div>`;
+      if (b[0] === "q") return `<div class="pq">${b[1].map(l => `<div class="q">${esc(l)}</div>`).join("")}${b[2] ? `<div class="h">${esc(b[2])}</div>` : ""}<div class="plines" style="height:${b[3] * 34}px"></div></div>`;
+      if (b[0] === "chk") return `<div class="pcheck">${b[2].map(o => `<span class="bx"></span>${o ? `<span class="o">${esc(o)}</span>` : ""}`).join("")}<span>${esc(b[1])}</span></div>`;
+      if (b[0] === "num") return `<div class="pq"><div class="q">${esc(b[1])}</div><div class="plines pnum" style="height:${b[2] * 34}px;width:62%">${Array.from({ length: b[2] }, (_, i) => `<span style="top:${i * 34 + 14}px">${i + 1}.</span>`).join("")}</div></div>`;
+      return "";
+    }).join("");
+  } else {
+    body = `<div class="plines" style="height:${48 * 34}px;margin-top:24px"></div>`;
+  }
+  return `${head}<div class="pbody">${fields}${body}</div><div class="pfoot"><span>Vertraulich – nur für die Lernbegleitung</span><span>Cowork Space</span></div>`;
+}
+
+let SH = null; // offenes Blatt
+function findSheet(id) {
+  for (const aid of Object.keys(S.clients)) for (const c of S.clients[aid]) { const s = (c.sheets || []).find(x => x.id === id); if (s) return { c, s }; }
+  return null;
+}
+function openSheet(id) {
+  const f = findSheet(id); if (!f) return;
+  const layer = document.getElementById("layer");
+  layer.innerHTML = `<div class="sheetv" role="dialog" aria-label="${esc(f.s.title)}">
+    <div class="sheetbar">
+      <button class="btn" data-sh="close">${ic("chevron-left")}Fertig</button>
+      <span class="ttl">${esc(f.s.title)}</span>
+      <button class="tool on" data-sh="pen" aria-label="Stift">${ic("pen-line")}</button>
+      <button class="tool" data-sh="marker" aria-label="Textmarker">${ic("highlighter")}</button>
+      <button class="tool" data-sh="eraser" aria-label="Radierer">${ic("eraser")}</button>
+      <span class="row" style="gap:6px">${["#3B2A1E", "#2A9D96", "#B85C78", "#2F5DA8"].map((col, i) => `<button class="colordot ${i === 0 ? "on" : ""}" data-sh="color" data-c="${col}" style="background:${col}" aria-label="Farbe"></button>`).join("")}</span>
+      <button class="tool" data-sh="undo" aria-label="Rückgängig">${ic("undo-2")}</button>
+      <button class="tool" data-sh="finger" aria-label="Mit dem Finger schreiben" title="Mit dem Finger schreiben">${ic("hand")}</button>
+    </div>
+    <div class="sheetscroll"><div class="holder"><div class="scaler"><div class="paper">${paperHTML(f.s, f.c)}<canvas class="base"></canvas><canvas class="live"></canvas></div></div></div></div>
+  </div>`;
+  icons();
+  const paper = layer.querySelector(".paper");
+  const H = paper.offsetHeight;
+  const DPR = 2;
+  const base = layer.querySelector("canvas.base"), live = layer.querySelector("canvas.live");
+  for (const cv of [base, live]) { cv.width = 720 * DPR; cv.height = H * DPR; cv.style.width = "720px"; cv.style.height = H + "px"; cv.getContext("2d").setTransform(DPR, 0, 0, DPR, 0, 0); }
+  f.s.strokes = f.s.strokes || [];
+  SH = { f, H, base, live, bctx: base.getContext("2d"), lctx: live.getContext("2d"), tool: "pen", color: "#3B2A1E", finger: false, cur: null, ops: [], raf: 0 };
+  fitSheet();
+  redrawBase();
+  live.addEventListener("pointerdown", shDown);
+  live.addEventListener("pointermove", shMove);
+  live.addEventListener("pointerup", shUp);
+  live.addEventListener("pointercancel", shUp);
+  live.addEventListener("touchstart", e => { if (SH && (SH.finger || [...e.touches].some(t => t.touchType === "stylus"))) e.preventDefault(); }, { passive: false });
+  live.addEventListener("touchmove", e => { if (SH && (SH.finger || [...e.touches].some(t => t.touchType === "stylus"))) e.preventDefault(); }, { passive: false });
+}
+function fitSheet() {
+  if (!SH) return;
+  const sc = document.querySelector(".sheetscroll"), holder = document.querySelector(".holder"), scaler = document.querySelector(".scaler");
+  const avail = sc.clientWidth - 24;
+  const k = Math.max(0.35, Math.min(1.6, avail / 720));
+  SH.k = k;
+  scaler.style.transform = `scale(${k})`;
+  holder.style.width = 720 * k + "px";
+  holder.style.height = SH.H * k + "px";
+}
+window.addEventListener("resize", fitSheet);
+function closeSheet() { SH = null; document.getElementById("layer").innerHTML = ""; save(); render(); }
+function shPos(e) { const r = SH.live.getBoundingClientRect(); const k = 720 / r.width; return [Math.round((e.clientX - r.left) * k * 10) / 10, Math.round((e.clientY - r.top) * k * 10) / 10, e.pressure && e.pointerType === "pen" ? Math.round(e.pressure * 100) / 100 : 0.5]; }
+function shDown(e) {
+  if (!SH) return;
+  if (e.pointerType === "touch" && !SH.finger) return;
+  e.preventDefault();
+  SH.live.setPointerCapture(e.pointerId);
+  const p = shPos(e);
+  if (SH.tool === "eraser") { SH.cur = { erase: true }; eraseAt(p); return; }
+  SH.cur = { t: SH.tool, c: SH.color, w: SH.tool === "marker" ? 16 : 2.2, p: [...p] };
+  drawLive();
+}
+function shMove(e) {
+  if (!SH || !SH.cur) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ev of evs.length ? evs : [e]) {
+    const p = shPos(ev);
+    if (SH.cur.erase) eraseAt(p); else SH.cur.p.push(...p);
+  }
+  if (!SH.cur.erase && !SH.raf) SH.raf = requestAnimationFrame(() => { SH.raf = 0; drawLive(); });
+}
+function shUp() {
+  if (!SH || !SH.cur) return;
+  if (!SH.cur.erase && SH.cur.p.length >= 3) {
+    SH.f.s.strokes.push(SH.cur);
+    SH.ops.push({ add: SH.cur });
+    drawStroke(SH.bctx, SH.cur);
+  }
+  SH.cur = null;
+  SH.lctx.clearRect(0, 0, 720, SH.H);
+  save();
+}
+function drawStroke(ctx, s) {
+  const p = s.p;
+  ctx.save();
+  ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = s.c;
+  if (s.t === "marker") {
+    ctx.globalAlpha = 0.32; ctx.lineWidth = s.w; ctx.lineCap = "butt";
+    ctx.beginPath(); ctx.moveTo(p[0], p[1]);
+    for (let i = 3; i < p.length; i += 3) ctx.lineTo(p[i], p[i + 1]);
+    if (p.length === 3) ctx.lineTo(p[0] + 0.1, p[1]);
+    ctx.stroke();
+  } else {
+    if (p.length === 3) { ctx.fillStyle = s.c; ctx.beginPath(); ctx.arc(p[0], p[1], s.w * 0.6, 0, 7); ctx.fill(); }
+    for (let i = 3; i < p.length; i += 3) {
+      ctx.lineWidth = s.w * (0.55 + 0.9 * (p[i + 2] ?? 0.5));
+      ctx.beginPath();
+      if (i >= 6) { const mx = (p[i - 3] + p[i]) / 2, my = (p[i - 2] + p[i + 1]) / 2, px = (p[i - 6] + p[i - 3]) / 2, py = (p[i - 5] + p[i - 2]) / 2; ctx.moveTo(px, py); ctx.quadraticCurveTo(p[i - 3], p[i - 2], mx, my); }
+      else { ctx.moveTo(p[i - 3], p[i - 2]); ctx.lineTo(p[i], p[i + 1]); }
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function drawLive() { if (!SH || !SH.cur || SH.cur.erase) return; SH.lctx.clearRect(0, 0, 720, SH.H); drawStroke(SH.lctx, SH.cur); }
+function redrawBase() { SH.bctx.clearRect(0, 0, 720, SH.H); for (const s of SH.f.s.strokes) drawStroke(SH.bctx, s); }
+function eraseAt([x, y]) {
+  const st = SH.f.s.strokes, r = 12;
+  const hit = st.filter(s => { for (let i = 0; i < s.p.length; i += 3) { const dx = s.p[i] - x, dy = s.p[i + 1] - y; if (dx * dx + dy * dy < (r + s.w / 2) ** 2) return true; } return false; });
+  if (!hit.length) return;
+  SH.f.s.strokes = st.filter(s => !hit.includes(s));
+  SH.ops.push({ erased: hit });
+  redrawBase();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-sh]"); if (!b || !SH) return;
+  const a = b.dataset.sh;
+  if (a === "close") return closeSheet();
+  if (["pen", "marker", "eraser"].includes(a)) { SH.tool = a; document.querySelectorAll(".sheetbar .tool[data-sh=pen],.sheetbar .tool[data-sh=marker],.sheetbar .tool[data-sh=eraser]").forEach(x => x.classList.toggle("on", x === b)); }
+  if (a === "color") { SH.color = b.dataset.c; if (SH.tool === "eraser") { SH.tool = "pen"; document.querySelectorAll(".sheetbar .tool").forEach(x => x.classList.toggle("on", x.dataset.sh === "pen")); } document.querySelectorAll(".colordot").forEach(x => x.classList.toggle("on", x === b)); }
+  if (a === "undo") { const op = SH.ops.pop(); if (op) { if (op.add) SH.f.s.strokes = SH.f.s.strokes.filter(s => s !== op.add); else SH.f.s.strokes.push(...op.erased); redrawBase(); save(); } }
+  if (a === "finger") { SH.finger = !SH.finger; b.classList.toggle("on", SH.finger); SH.live.classList.toggle("finger", SH.finger); toast(SH.finger ? "Finger schreibt jetzt – zum Blättern wieder ausschalten" : "Finger blättert, Stift schreibt"); }
+});
+
+// ---------- Kleine Dialoge ----------
+function toast(t) { const el = document.createElement("div"); el.className = "toast"; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), 2600); }
+function confirmBox(text, okLabel, onOk, detail = "") {
+  const bg = document.createElement("div"); bg.className = "modal-bg";
+  bg.innerHTML = `<div class="modal" role="dialog"><h3 style="font-size:19px">${esc(text)}</h3>${detail ? `<div class="hint">${esc(detail)}</div>` : ""}<div class="row" style="justify-content:flex-end"><button class="btn" data-x="no">Abbrechen</button><button class="btn pri" data-x="ok">${esc(okLabel)}</button></div></div>`;
+  bg.addEventListener("click", ev => { const x = ev.target.closest("[data-x]"); if (ev.target === bg || (x && x.dataset.x === "no")) bg.remove(); else if (x && x.dataset.x === "ok") { bg.remove(); onOk(); } });
+  document.body.appendChild(bg); icons();
+}
+function areaEditor(a, isNew) {
+  const d = { name: a.name, color: LEGACY[a.color] || a.color, icon: a.icon, modules: [...a.modules] };
+  const bg = document.createElement("div"); bg.className = "modal-bg";
+  const paint = () => {
+    bg.innerHTML = `<div class="modal" role="dialog"><h3 style="font-size:20px">${isNew ? "Neuer Bereich" : "Bereich bearbeiten"}</h3>
+      <label class="field"><span>Name</span><input class="in" id="ae-name" value="${esc(d.name)}"></label>
+      <div class="field"><span>Farbe</span><div class="swatches">${Object.keys(PAL).map(k => `<button class="sw ${d.color === k ? "on" : ""}" data-col="${k}" style="background:${PAL[k][1]};border-color:${PAL[k][0]}" aria-label="${PAL[k][2]}"></button>`).join("")}</div></div>
+      <div class="field"><span>Symbol</span><div class="icons">${ICONS.map(n => `<button class="${d.icon === n ? "on" : ""}" data-ico="${n}" aria-label="${n}">${ic(n)}</button>`).join("")}</div></div>
+      <div class="field"><span>Zusatzfunktionen</span>${Object.entries(MODULES).map(([k, l]) => `<label class="chk"><input type="checkbox" data-mod="${k}" ${d.modules.includes(k) ? "checked" : ""}> ${l}</label>`).join("")}</div>
+      <div class="row">${isNew ? "" : `<button class="btn danger" data-x="del">${ic("trash-2")}Entfernen</button>`}<span class="grow"></span><button class="btn" data-x="no">Abbrechen</button><button class="btn pri" data-x="ok">${isNew ? "Anlegen" : "Sichern"}</button></div></div>`;
+    icons();
+  };
+  paint();
+  bg.addEventListener("input", ev => { if (ev.target.id === "ae-name") d.name = ev.target.value; });
+  bg.addEventListener("change", ev => { const m = ev.target.dataset.mod; if (m) { d.modules = d.modules.filter(x => x !== m); if (ev.target.checked) d.modules.push(m); } });
+  bg.addEventListener("click", ev => {
+    const t = ev.target.closest("button,[data-x]");
+    if (ev.target === bg) return bg.remove();
+    if (!t) return;
+    if (t.dataset.col) { d.color = t.dataset.col; paint(); }
+    else if (t.dataset.ico) { d.icon = t.dataset.ico; paint(); }
+    else if (t.dataset.x === "no") bg.remove();
+    else if (t.dataset.x === "ok") {
+      if (!d.name.trim()) return;
+      Object.assign(a, { name: d.name.trim(), color: d.color, icon: d.icon, modules: d.modules });
+      if (isNew) S.areas.push(a);
+      bg.remove(); save(); ui.view = "area"; ui.areaId = a.id; render();
+    } else if (t.dataset.x === "del") {
+      bg.remove();
+      confirmBox(`„${a.name}“ entfernen?`, "Entfernen", () => { S.areas = S.areas.filter(x => x.id !== a.id); S.tasks.forEach(x => { if (x.area === a.id) x.area = ""; }); save(); ui.view = "home"; render(); }, "Aufgaben bleiben erhalten (ohne Bereich). Kundenkarteien und Finanzen dieses Bereichs werden nicht mehr angezeigt.");
+    }
+  });
+  document.body.appendChild(bg);
+}
+
+// ---------- Aktionen ----------
+function curArea() { return area(ui.areaId); }
+function curClient() { const a = curArea(); return a ? clientsOf(a.id).find(c => c.id === ui.clientId) : null; }
+const ACT = {
+  go(el) { ui.view = el.dataset.v; if (el.dataset.id) { if (ui.areaId !== el.dataset.id) { ui.areaTab = "overview"; } ui.areaId = el.dataset.id; } if (el.dataset.tab) ui.areaTab = el.dataset.tab; render(); },
+  areaTab(el) { ui.areaTab = el.dataset.v; render(); },
+  newArea() { areaEditor({ id: uid(), name: "", color: "rosa", icon: "star", modules: [] }, true); },
+  editArea(el) { const a = area(el.dataset.id); if (a) areaEditor(a, false); },
+  toggleTask(el) { const t = S.tasks.find(x => x.id === el.dataset.id); if (!t) return; t.done = !t.done; t.doneAt = t.done ? today() : null; save(); render(); },
+  delTask(el) { S.tasks = S.tasks.filter(x => x.id !== el.dataset.id); save(); render(); },
+  moveDue(el) {
+    const t = S.tasks.find(x => x.id === el.dataset.id); if (!t) return;
+    const bg = document.createElement("div"); bg.className = "modal-bg";
+    bg.innerHTML = `<div class="modal"><h3>Fällig</h3><div class="row">${[["Heute", today()], ["Morgen", addDays(today(), 1)], ["Nächste Woche", addDays(today(), 7)], ["Kein Datum", ""]].map(([l, v]) => `<button class="btn" data-d="${v}">${l}</button>`).join("")}</div><input class="in" type="date" id="md" value="${esc(t.due || "")}"><div class="row" style="justify-content:flex-end"><button class="btn" data-d="x">Abbrechen</button><button class="btn pri" data-d="pick">Übernehmen</button></div></div>`;
+    bg.addEventListener("click", ev => { const b = ev.target.closest("[data-d]"); if (ev.target === bg) return bg.remove(); if (!b) return; const v = b.dataset.d; if (v === "x") return bg.remove(); t.due = v === "pick" ? (bg.querySelector("#md").value || null) : (v || null); bg.remove(); save(); render(); });
+    document.body.appendChild(bg);
+  },
+  delEvent(el) { S.events = S.events.filter(x => x.id !== el.dataset.id); save(); render(); },
+  pickClient(el) { ui.clientId = el.dataset.id; render(); },
+  ctab(el) { ui.ctab = el.dataset.v; render(); },
+  delClient(el) {
+    const a = curArea(); const c = curClient(); if (!a || !c) return;
+    confirmBox(`Kartei „${c.name}“ löschen?`, "Endgültig löschen", () => { S.clients[a.id] = clientsOf(a.id).filter(x => x.id !== c.id); ui.clientId = null; save(); render(); }, "Anamnese, Befunde, Förderplan, Einheiten und handschriftliche Bögen werden gelöscht. Tipp: Stattdessen „Aktiv“ ausschalten.");
+  },
+  newSheet(el) {
+    const c = curClient(); if (!c) return;
+    c.sheets = c.sheets || [];
+    const s = { id: uid(), kind: el.dataset.v, title: (el.dataset.v === "anamnese" ? "Anamnesebogen " : "Notiz ") + fmtDate(today()), date: today(), strokes: [] };
+    c.sheets.push(s); save(); render(); openSheet(s.id);
+  },
+  openSheet(el) { openSheet(el.dataset.id); },
+  delSheet(el) { const c = curClient(); if (!c) return; confirmBox("Bogen löschen?", "Löschen", () => { c.sheets = c.sheets.filter(s => s.id !== el.dataset.id); save(); render(); }, "Die Handschrift auf diesem Bogen wird gelöscht."); },
+  addFinding() { const c = curClient(); if (!c) return; c.findings = c.findings || []; c.findings.push({ id: uid(), date: today(), title: "", source: "", result: "", interpretation: "" }); save(); render(); },
+  delFinding(el) { const c = curClient(); confirmBox("Befund löschen?", "Löschen", () => { c.findings = c.findings.filter(f => f.id !== el.dataset.id); save(); render(); }); },
+  addGoal() { const c = curClient(); if (!c) return; c.goals = c.goals || []; c.goals.push({ id: uid(), domain: "", goal: "", measures: "", status: "Offen", targetDate: null, evaluation: "" }); save(); render(); },
+  delGoal(el) { const c = curClient(); confirmBox("Förderziel löschen?", "Löschen", () => { c.goals = c.goals.filter(g => g.id !== el.dataset.id); save(); render(); }); },
+  addSession() { const c = curClient(); if (!c) return; c.sessions = c.sessions || []; const s = { id: uid(), date: today(), minutes: 60, topic: "", content: "", notes: "", nextSteps: "", goalIDs: [], amount: +c.rate || 0, paid: false }; c.sessions.push(s); ui.openSessions[s.id] = true; save(); render(); },
+  toggleSession(el) { ui.openSessions[el.dataset.id] = !ui.openSessions[el.dataset.id]; render(); },
+  toggleGoal(el) { const c = curClient(); const s = c && c.sessions.find(x => x.id === el.dataset.id); if (!s) return; s.goalIDs = s.goalIDs || []; const g = el.dataset.v; s.goalIDs = s.goalIDs.includes(g) ? s.goalIDs.filter(x => x !== g) : [...s.goalIDs, g]; save(); render(); },
+  delSession(el) { const c = curClient(); confirmBox("Einheit löschen?", "Löschen", () => { c.sessions = c.sessions.filter(s => s.id !== el.dataset.id); save(); render(); }); },
+  allPaid() { const c = curClient(); (c.sessions || []).forEach(s => s.paid = true); save(); render(); },
+  sessionNote(el) {
+    const c = curClient(); if (!c) return; c.sheets = c.sheets || [];
+    let n = c.sheets.find(x => x.sessionId === el.dataset.id);
+    if (!n) { const s = c.sessions.find(x => x.id === el.dataset.id); n = { id: uid(), kind: "notiz", sessionId: el.dataset.id, title: "Notiz Einheit " + fmtDate(s ? s.date : today()), date: s ? s.date : today(), strokes: [] }; c.sheets.push(n); save(); }
+    openSheet(n.id);
+  },
+  month(el) { const d = parseIso(ui.month); d.setMonth(d.getMonth() + +el.dataset.v); ui.month = iso(d); render(); },
+  delFin(el) { const a = curArea(); S.finance[a.id] = financeOf(a.id).filter(x => x.id !== el.dataset.id); save(); render(); },
+  delChapter(el) { const w = writingOf(ui.areaId); w.chapters.splice(+el.dataset.v, 1); save(); render(); },
+  async csv() {
+    const a = curArea(); const y = ui.month.slice(0, 4);
+    const rows = ledger(a.id).filter(x => (x.date || "").startsWith(y)).sort((p, q) => p.date.localeCompare(q.date));
+    const q = s => '"' + String(s ?? "").replace(/"/g, '""') + '"';
+    const csv = "﻿Datum;Art;Kategorie;Notiz;Betrag\n" + rows.map(x => [fmtDate(x.date), x.kind, q(x.category), q(x.note), ((x.kind === "Einnahme" ? 1 : -1) * (+x.amount || 0)).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })].join(";")).join("\n");
+    await offerFile(`${a.name} Finanzen ${y}.csv`, csv, "text/csv");
+  },
+  async export() {
+    const name = `Cowork Space Web Sicherung ${today()}.json`;
+    const ok = await offerFile(name, JSON.stringify(S));
+    if (ok) { S.lastExport = new Date().toISOString(); save(); render(); toast("Sicherung gespeichert"); }
+  },
+  async persist() {
+    try { S.persisted = !!(navigator.storage && navigator.storage.persist && await navigator.storage.persist()); } catch (e) { S.persisted = false; }
+    save(); render(); toast(S.persisted ? "Daten werden dauerhaft gespeichert" : "Der Browser hat abgelehnt – bitte regelmäßig sichern");
+  },
+};
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-a]"); if (!el) return;
+  const f = ACT[el.dataset.a]; if (f) { e.preventDefault(); f(el); }
+});
+
+// Formulare
+document.addEventListener("submit", e => {
+  const f = e.target.closest("[data-form]"); if (!f) return;
+  e.preventDefault();
+  const k = f.dataset.form;
+  if (k === "addTask") {
+    const d = draft.task; const title = (d.title || "").trim(); if (!title) return;
+    const due = { none: null, today: today(), tomorrow: addDays(today(), 1), week: addDays(today(), 7) }[d.due || "none"];
+    S.tasks.push({ id: uid(), title, area: f.dataset.area || d.area || "", due, done: false, created: new Date().toISOString() });
+    d.title = ""; save(); render(); const n = document.getElementById("newtask"); if (n) n.focus();
+  } else if (k === "addEvent") {
+    const d = draft.ev; if (!(d.title || "").trim() || !d.date) { toast("Bitte Titel und Datum angeben"); return; }
+    S.events.push({ id: uid(), title: d.title.trim(), date: d.date, start: d.start || "", end: d.end || "", place: d.place || "", area: d.area || "" });
+    draft.ev = { title: "", date: d.date, start: "", end: "", area: d.area, place: "" }; save(); render(); toast("Termin eingetragen");
+  } else if (k === "addClient") {
+    const a = curArea(); const n = (draft.client || "").trim(); if (!a || !n) return;
+    const c = { id: uid(), name: n, birthday: null, school: "", guardian: "", email: "", phone: "", rate: 0, notes: "", active: true, startDate: today(), anamnesis: {}, findings: [], goals: [], planReview: null, sessions: [], sheets: [] };
+    clientsOf(a.id).push(c); ui.clientId = c.id; ui.ctab = "stamm"; draft.client = ""; save(); render();
+  } else if (k === "addFin") {
+    const a = curArea(); const d = draft.fin; const amt = typeof d.amount === "number" ? d.amount : parseFloat(String(d.amount).replace(",", "."));
+    if (!(amt > 0)) { toast("Bitte einen Betrag eingeben"); return; }
+    financeOf(a.id).push({ id: uid(), date: d.date || today(), kind: d.kind, amount: amt, category: d.category, note: (d.note || "").trim() });
+    d.amount = ""; d.note = ""; save(); render(); toast("Gebucht");
+  } else if (k === "logWords") {
+    const n = typeof draft.words === "number" ? draft.words : parseInt(draft.words, 10); if (!n) return;
+    const w = writingOf(ui.areaId); w.log[today()] = Math.max(0, (w.log[today()] || 0) + n); draft.words = ""; save(); render();
+  } else if (k === "addChapter") {
+    const t = (draft.chapter || "").trim(); if (!t) return; writingOf(ui.areaId).chapters.push({ id: uid(), title: t, words: 0, status: "Idee" }); draft.chapter = ""; save(); render();
+  }
+});
+
+// ---------- Dateien ----------
+async function offerFile(name, text, mime = "application/json") {
+  const file = new File([text], name, { type: mime });
+  // Mac (Chrome/Edge): echter Speichern-Dialog
+  if (window.showSaveFilePicker) {
+    try {
+      const ext = name.split(".").pop();
+      const h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: ext.toUpperCase(), accept: { [mime]: ["." + ext] } }] });
+      const w = await h.createWritable(); await w.write(file); await w.close();
+      return true;
+    } catch (err) { if (err && err.name === "AbortError") return false; }
+  }
+  // iPad/iPhone: Teilen-Menü › „In Dateien sichern“
+  if (navigator.canShare && navigator.canShare({ files: [file] }) && "ontouchend" in document) {
+    try { await navigator.share({ files: [file], title: name }); toast("Wähle „In Dateien sichern“ › iCloud Drive › Cowork Space"); return true; }
+    catch (err) { if (err && err.name === "AbortError") return false; }
+  }
+  // Sonst: normaler Download
+  const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  return true;
+}
+const readText = file => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(file); });
+
+document.addEventListener("change", async e => {
+  const inpEl = e.target.closest("[data-file]"); if (!inpEl || !inpEl.files.length) return;
+  const files = [...inpEl.files]; inpEl.value = "";
+  try {
+    if (inpEl.dataset.file === "backup") {
+      const data = JSON.parse(await readText(files[0]));
+      if (!data || !Array.isArray(data.areas)) { toast("Das ist keine Sicherung dieser App"); return; }
+      confirmBox("Sicherung laden?", "Laden", () => { S = Object.assign(defaults(), data); save(); ui.view = "home"; render(); toast("Sicherung geladen"); }, "Alle jetzigen Daten in dieser Web-App werden durch die Sicherung ersetzt.");
+    } else if (inpEl.dataset.file === "mac") {
+      let areas = null, mods = null;
+      for (const f of files) { const j = JSON.parse(await readText(f)); if (Array.isArray(j)) areas = j; else if (j && typeof j === "object" && ("clients" in j || "writing" in j || "finance" in j)) mods = j; }
+      if (!areas && !mods) { toast("Bitte bereiche.json und module.json wählen"); return; }
+      const r = importMac(areas, mods);
+      save(); render();
+      confirmBox("Übernommen", "OK", () => {}, `${r.areas} Bereiche, ${r.clients} Karteien, ${r.fin} Buchungen${r.writing ? ", Schreibziel" : ""}.`);
+    }
+  } catch (err) { toast("Datei konnte nicht gelesen werden"); console.error(err); }
+});
+
+// Mac-Daten: Swift speichert Datumswerte als Sekunden seit 1.1.2001, UUID-Wörterbücher als [Schlüssel, Wert, …]
+const REF = 978307200;
+const sd = v => v == null ? null : (typeof v === "number" ? iso(new Date((v + REF) * 1000)) : String(v).slice(0, 10));
+const pairs = x => { const o = {}; if (Array.isArray(x)) for (let i = 0; i + 1 < x.length; i += 2) o[x[i]] = x[i + 1]; else if (x && typeof x === "object") Object.assign(o, x); return o; };
+function mergeById(oldList = [], newList = []) { const m = new Map(oldList.map(x => [x.id, x])); for (const n of newList) m.set(n.id, Object.assign(m.get(n.id) || {}, n)); return [...m.values()]; }
+function importMac(areas, mods) {
+  const r = { areas: 0, clients: 0, fin: 0, writing: false };
+  if (areas) {
+    for (const a of areas) {
+      const ex = S.areas.find(x => x.id === a.id) || S.areas.find(x => x.name === a.name);
+      const conv = { id: ex ? ex.id : a.id, name: a.name, icon: SYM[a.symbol] || "star", color: LEGACY[a.colorName] || a.colorName || "rosa", modules: (a.modules || []).filter(m => MODULES[m]) };
+      if (ex) { if (ex.id !== a.id) { remapArea(ex.id, a.id); conv.id = a.id; } Object.assign(ex, conv); } else S.areas.push(conv);
+      if (a.notes) S.notes[conv.id] = a.notes;
+      r.areas++;
+    }
+  }
+  if (mods) {
+    const cl = pairs(mods.clients), fi = pairs(mods.finance), wr = pairs(mods.writing);
+    for (const [aid, list] of Object.entries(cl)) {
+      const conv = (list || []).map(c => ({
+        id: c.id, name: c.name, birthday: sd(c.birthday), school: c.school || "", guardian: c.guardian || "", email: c.email || "", phone: c.phone || "",
+        rate: c.rate || 0, notes: c.notes || "", active: c.active !== false, startDate: sd(c.startDate), anamnesis: c.anamnesis || {},
+        findings: (c.findings || []).map(f => ({ ...f, date: sd(f.date) })),
+        goals: (c.goals || []).map(g => ({ ...g, targetDate: sd(g.targetDate) })),
+        planReview: sd(c.planReview),
+        sessions: (c.sessions || []).map(s => ({ ...s, date: sd(s.date) })),
+      }));
+      const existing = clientsOf(aid);
+      for (const c of conv) {
+        const e = existing.find(x => x.id === c.id);
+        if (e) { const keep = { sheets: e.sheets || [] }; c.sessions = mergeById(e.sessions, c.sessions); c.findings = mergeById(e.findings, c.findings); c.goals = mergeById(e.goals, c.goals); Object.assign(e, c, keep); }
+        else existing.push({ ...c, sheets: [] });
+        r.clients++;
+      }
+    }
+    for (const [aid, list] of Object.entries(fi)) { S.finance[aid] = mergeById(financeOf(aid), (list || []).map(f => ({ ...f, date: sd(f.date) }))); r.fin += (list || []).length; }
+    for (const [aid, w] of Object.entries(wr)) {
+      const cur = writingOf(aid);
+      const log = { ...cur.log }; for (const [k, v] of Object.entries(w.log || {})) log[k] = Math.max(log[k] || 0, v);
+      S.writing[aid] = { dailyGoal: w.dailyGoal || cur.dailyGoal, totalGoal: w.totalGoal || cur.totalGoal, chapters: mergeById(cur.chapters, w.chapters || []), log };
+      r.writing = true;
+    }
+  }
+  return r;
+}
+function remapArea(from, to) {
+  for (const k of ["clients", "finance", "writing"]) if (S[k][from] && !S[k][to]) { S[k][to] = S[k][from]; delete S[k][from]; }
+  if (S.notes[from] != null && S.notes[to] == null) { S.notes[to] = S.notes[from]; delete S.notes[from]; }
+  S.tasks.forEach(t => { if (t.area === from) t.area = to; });
+  S.events.forEach(e => { if (e.area === from) e.area = to; });
+  if (ui.areaId === from) ui.areaId = to;
+}
+
+// ---------- Start ----------
+(async function start() {
+  render(); // sofort sichtbar, auch bevor der Speicher antwortet
+  await KV.open();
+  const raw = await KV.get("state");
+  if (raw) { try { S = Object.assign(defaults(), JSON.parse(raw)); } catch (e) { console.error(e); } }
+  else { const ok = await KV.set("probe", "1"); KV.ok = ok; }
+  try { if (navigator.storage && navigator.storage.persisted) S.persisted = await navigator.storage.persisted(); } catch (e) {}
+  render();
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>

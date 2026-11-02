@@ -293,7 +293,7 @@ function defaults() {
     ],
     tasks: [], events: [], notes: {},
     clients: {}, finance: {}, writing: {},
-    lastExport: null, persisted: false, calSync: true,
+    lastExport: null, persisted: false, calSync: true, calShortcut: false,
   };
 }
 
@@ -516,45 +516,68 @@ function icsFor(e) {
     e.place ? `LOCATION:${icsText(e.place)}` : null, a ? `DESCRIPTION:${icsText("Bereich: " + a.name)}` : null,
     "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n") + "\r\n";
 }
-/** Übergibt den Termin an den Kalender. Am Mac wird die Datei geladen und mit der Kalender-App
- *  geöffnet. Auf dem iPad (auch als App vom Home-Bildschirm, wo neue Fenster blockiert sind)
- *  erscheint ein kleiner Dialog: direkt in der Kalender-Vorschau öffnen oder über „Teilen“. */
+const SHORTCUT = "Cowork Termin";
+const isTouch = () => "ontouchend" in document;
+
+/** Übergibt den Termin an den Kalender.
+ *  Mac: Die ICS-Datei wird geladen und mit der Kalender-App geöffnet.
+ *  iPad: iOS lässt Home-Bildschirm-Apps keine Kalender-Dateien öffnen. Deshalb übernimmt der
+ *  Kurzbefehl „Cowork Termin“ (Kurzbefehle-App) das Eintragen – einmal einrichten, dann automatisch. */
 function addToCalendar(e) {
-  const name = (e.title || "Termin").replace(/[\\/:*?"<>|]/g, "-") + ".ics";
-  const text = icsFor(e);
-  const blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
-  if (!("ontouchend" in document)) {
+  if (!isTouch()) {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = name;
+    a.href = URL.createObjectURL(new Blob([icsFor(e)], { type: "text/calendar;charset=utf-8" }));
+    a.download = (e.title || "Termin").replace(/[\\/:*?"<>|]/g, "-") + ".ics";
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
     e.inCal = true; save();
     return;
   }
-  saveNow();
-  const url = URL.createObjectURL(blob);
-  const file = new File([text], name, { type: "text/calendar" });
-  const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+  if (!S.calShortcut) { shortcutGuide(); return; }
+  e.inCal = true;
+  saveNow().then(() => { location.href = shortcutURL(e); });
+}
+function shortcutURL(e) {
+  const de = (d, t) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)} ${t}`;
+  let start = e.start || "00:00", end = e.end;
+  if (!e.start) end = "23:59";
+  else if (!end || end <= e.start) { const [h, m] = e.start.split(":").map(Number); const x = Math.min(h * 60 + m + 60, 23 * 60 + 59); end = `${pad(Math.floor(x / 60))}:${pad(x % 60)}`; }
+  const a = area(e.area);
+  const data = { titel: e.title, start: de(e.date, start), ende: de(e.date, end), ort: e.place || "", notiz: a ? "Bereich: " + a.name : "" };
+  return `shortcuts://run-shortcut?name=${encodeURIComponent(SHORTCUT)}&input=text&text=${encodeURIComponent(JSON.stringify(data))}`;
+}
+/** Nach dem Test-Termin (auch wenn iOS die App beim Zurückkehren neu lädt): nachfragen. */
+function checkCalTest() {
+  if (!S.calTestPending || document.visibilityState !== "visible" || document.querySelector(".modal-bg")) return;
+  S.calTestPending = false; save();
+  confirmBox("Steht der Test-Termin heute in deinem Kalender?", "Ja, klappt", () => { S.calShortcut = true; save(); render(); toast("Kalender-Übergabe ist eingerichtet"); },
+    "Falls nicht: Prüfe den Namen „" + SHORTCUT + "“ und die Felder im Kurzbefehl, dann erneut testen. Den Test-Termin kannst du im Kalender löschen.");
+}
+document.addEventListener("visibilitychange", () => setTimeout(checkCalTest, 600));
+
+function shortcutGuide() {
   const bg = document.createElement("div"); bg.className = "modal-bg";
-  bg.innerHTML = `<div class="modal" role="dialog"><h3 style="font-size:20px">In den Kalender übernehmen</h3>
-    <div><b>${esc(e.title)}</b><div class="hint">${esc(fmtLong(e.date))}${e.start ? ", " + esc(e.start) + " Uhr" : ", ganztägig"}</div></div>
-    <a class="btn pri" href="${url}" data-cal="go" style="justify-content:center;text-decoration:none">${ic("calendar-plus")}Zum Kalender hinzufügen</a>
-    ${canShare ? `<button class="btn" data-cal="share" style="justify-content:center">${ic("share")}Über Teilen (falls oben nichts passiert)</button>` : ""}
-    <div class="hint small">Im Kalender-Fenster auf „Hinzufügen“ tippen. Über Teilen: „In Dateien sichern“ wählen, dann die Datei in der Dateien-App antippen – iOS bietet „Zum Kalender hinzufügen“ an.</div>
-    <div class="row" style="justify-content:flex-end"><button class="btn ghost" data-cal="no">Nicht übernehmen</button></div></div>`;
-  const close = () => { bg.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); render(); };
-  bg.addEventListener("click", async ev => {
-    const b = ev.target.closest("[data-cal]");
-    if (ev.target === bg) return close();
-    if (!b) return;
-    if (b.dataset.cal === "go") { e.inCal = true; saveNow(); setTimeout(close, 400); return; }  // Link öffnet die Kalender-Vorschau
-    if (b.dataset.cal === "share") {
-      ev.preventDefault();
-      try { await navigator.share({ files: [file], title: e.title }); e.inCal = true; saveNow(); close(); }
-      catch (err) { if (!err || err.name !== "AbortError") toast("Teilen hat nicht geklappt"); }
-      return;
+  const step = (n, html) => `<div class="row" style="align-items:flex-start;flex-wrap:nowrap"><span class="badge" style="background:var(--tq-pastel);color:var(--tq);min-width:26px;justify-content:center">${n}</span><div class="grow">${html}</div></div>`;
+  bg.innerHTML = `<div class="modal" role="dialog" style="width:min(620px,100%)"><h3 style="font-size:20px">Kurzbefehl „${SHORTCUT}“ einrichten</h3>
+    <div class="hint">Einmalig, etwa 5 Minuten. Danach trägt Cowork Space neue Termine automatisch in deinen Kalender ein.</div>
+    ${step(1, "Öffne die App <b>Kurzbefehle</b> und tippe oben auf <b>+</b>.")}
+    ${step(2, `Tippe oben auf den Namen und nenne den Kurzbefehl genau <b>${SHORTCUT}</b>.`)}
+    ${step(3, "Aktion suchen: <b>Wörterbuch abrufen</b> – antippen. Tippe in der Aktion auf das blaue Feld und wähle <b>Kurzbefehl-Eingabe</b>.")}
+    ${step(4, "Aktion suchen: <b>Wörterbuchwert abrufen</b>. Tippe auf <b>Schlüssel</b> und schreibe <b>titel</b>.")}
+    ${step(5, "Schritt 4 noch dreimal wiederholen, mit den Schlüsseln <b>start</b>, <b>ende</b> und <b>ort</b>.")}
+    ${step(6, "Aktion suchen: <b>Neues Ereignis hinzufügen</b>. Dann jeweils das Feld antippen › <b>Variable auswählen</b> › den passenden Block antippen:<br>• <b>Ereignis</b>/Titel → Block mit <i>titel</i><br>• <b>Startdatum</b> → Block mit <i>start</i><br>• <b>Enddatum</b> → Block mit <i>ende</i><br>• unter <b>Mehr anzeigen</b> › <b>Ort</b> → Block mit <i>ort</i><br>• <b>Kalender</b>: deinen Kalender wählen (z. B. iCloud)")}
+    ${step(7, "Oben rechts auf <b>Fertig</b>. Zurück in Cowork Space: unten auf <b>Test-Termin senden</b> tippen.")}
+    <div class="hint small">Wenn iOS beim ersten Mal fragt, ob der Kurzbefehl auf den Kalender zugreifen darf: <b>Erlauben</b>. Danach mit <b>‹ Cowork Space</b> oben links zurückkehren.</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-g="no">Später</button><button class="btn pri" data-g="test">${ic("send")}Test-Termin senden</button></div></div>`;
+  bg.addEventListener("click", ev => {
+    const b = ev.target.closest("[data-g]");
+    if (ev.target === bg || (b && b.dataset.g === "no")) return bg.remove();
+    if (b && b.dataset.g === "test") {
+      bg.remove();
+      const t = { id: uid(), title: "Cowork Space – Test", date: today(), start: "", end: "", place: "", area: "" };
+      S.calTestPending = true;
+      saveNow().then(() => { location.href = shortcutURL(t); });
     }
-    close();
   });
   document.body.appendChild(bg); icons();
 }
@@ -586,7 +609,9 @@ function vCalendar() {
         <div class="field" style="justify-content:flex-end"><button class="btn pri" type="submit">${ic("plus")}Eintragen</button></div>
       </form>
       ${chk(S, "calSync", "Neue Termine auch in den Kalender übernehmen")}
-      <div class="hint small">Beim Eintragen erscheint „Zum Kalender hinzufügen“ – antippen und im Kalender-Fenster „Hinzufügen“ wählen. Mit ${ic("calendar-plus")} kannst du jeden Termin auch später übernehmen. Änderungen oder Löschen hier werden nicht in den Kalender übertragen.</div></div>
+      ${isTouch() ? `<div class="row small">${S.calShortcut ? `<span style="color:var(--ok);font-weight:700">${ic("check")} Kurzbefehl „${SHORTCUT}“ eingerichtet</span>` : `<span class="muted">Auf dem iPad braucht es dafür einmalig den Kurzbefehl „${SHORTCUT}“.</span>`}
+        <button class="btn sm" data-a="shortcutGuide">${S.calShortcut ? "Anleitung & Test" : "Jetzt einrichten"}</button></div>` : ""}
+      <div class="hint small">Neue Termine werden beim Eintragen in deinen Kalender übernommen. Mit ${ic("calendar-plus")} kannst du jeden Termin auch später übernehmen. Änderungen oder Löschen hier werden nicht in den Kalender übertragen.</div></div>
     <div class="card"><div class="ct">${ic("calendar")}Anstehend</div>
       ${days.length ? days.map(day => `<div class="dayh">${day === t ? "Heute – " : day === addDays(t, 1) ? "Morgen – " : ""}${esc(fmtLong(day))}</div>${up.filter(e => e.date === day).map(e => evRow(e)).join("")}`).join("") : '<div class="hint">Noch keine Termine.</div>'}</div>`;
 }
@@ -1037,6 +1062,7 @@ const ACT = {
     bg.addEventListener("click", ev => { const b = ev.target.closest("[data-d]"); if (ev.target === bg) return bg.remove(); if (!b) return; const v = b.dataset.d; if (v === "x") return bg.remove(); t.due = v === "pick" ? (bg.querySelector("#md").value || null) : (v || null); bg.remove(); save(); render(); });
     document.body.appendChild(bg);
   },
+  shortcutGuide() { shortcutGuide(); },
   calEvent(el) { const e = S.events.find(x => x.id === el.dataset.id); if (e) addToCalendar(e); },
   delEvent(el) { S.events = S.events.filter(x => x.id !== el.dataset.id); save(); render(); },
   pickClient(el) { ui.clientId = el.dataset.id; render(); },
@@ -1233,5 +1259,6 @@ function remapArea(from, to) {
   try { if (navigator.storage && navigator.storage.persisted) S.persisted = await navigator.storage.persisted(); } catch (e) {}
   render();
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+  setTimeout(checkCalTest, 800);
 })();
 </script>

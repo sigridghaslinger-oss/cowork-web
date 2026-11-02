@@ -303,7 +303,6 @@ function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => KV.set("state", JSON.stringify(S)), 350);
 }
-function saveNow() { clearTimeout(saveTimer); return KV.set("state", JSON.stringify(S)); }
 
 let ui = { view: "home", areaId: null, areaTab: "overview", clientId: null, ctab: "einheiten", month: today().slice(0, 7) + "-01", openSessions: {}, showDone: true };
 let draft = { task: { title: "", area: "", due: "today" }, ev: { title: "", date: today(), start: "", end: "", area: "" }, fin: { kind: "Ausgabe", date: today(), amount: "", category: "Material", note: "" }, words: "", chapter: "", client: "" };
@@ -444,8 +443,8 @@ function vHome() {
     ${backupBanner()}
     <h2 class="h2">Überblick</h2>
     <div class="tiles">
-      ${tile("butter", "sun", "Heute", `${due} ${due === 1 ? "Aufgabe" : "Aufgaben"} fällig`, 'data-a="go" data-v="today"')}
-      ${tile("rosa", "calendar", "Termine", "In der Kalender-App", 'data-a="go" data-v="calendar"')}
+      ${tile("butter", "sun", "Heute", `${due} ${due === 1 ? "Aufgabe" : "Aufgaben"} · ${evToday} ${evToday === 1 ? "Termin" : "Termine"}`, 'data-a="go" data-v="today"')}
+      ${tile("rosa", "calendar", "Termine", next ? `${next.date === t ? "Heute" : fmtDay(next.date)}${next.start ? " " + next.start : ""}: ${next.title}` : "Keine Termine", 'data-a="go" data-v="calendar"')}
       ${tile("sand", "database", "Daten & Sicherung", S.lastExport ? "Gesichert am " + fmtDate(S.lastExport.slice(0, 10)) : "Noch nicht gesichert", 'data-a="go" data-v="data"')}
     </div>
     <h2 class="h2">Bereiche</h2>
@@ -487,9 +486,8 @@ function vToday() {
     ${quickAdd()}
     <div class="cols"><div class="card"><div class="ct">${ic("list-checks")}Aufgaben für heute</div>${taskList(list, true, "Nichts fällig – schön!")}</div>
     <div class="stack">
-      <div class="card"><div class="ct">${ic("calendar")}Termine</div>
-        ${isTouch() ? `<div class="row">${calLink(t, "Heute im Kalender")}${calLink(addDays(t, 1), "Morgen", "btn")}</div>` : '<div class="hint">Deine Termine findest du in der Kalender-App und in der Mac-App.</div>'}
-        ${evs.length || evsT.length ? `<div class="dayh">Aus der Web-App</div>${evs.map(evRow).join("")}${evsT.map(e => evRow(e, true)).join("")}` : ""}</div>
+      <div class="card"><div class="ct">${ic("calendar")}Termine heute</div>${evs.length ? evs.map(evRow).join("") : '<div class="hint">Keine Termine heute.</div>'}
+        ${evsT.length ? `<div class="dayh">Morgen</div>${evsT.map(evRow).join("")}` : ""}</div>
       ${wa.map(a => { const w = writingOf(a.id); const n = w.log[t] || 0; const pct = Math.min(100, n / Math.max(1, w.dailyGoal) * 100);
         return `<div class="card" style="cursor:pointer" data-a="go" data-v="area" data-id="${a.id}" data-tab="writing"><div class="ct">${ic("pen-line")}Schreiben heute<span class="sp small muted">${streak(w) ? "🔥 " + streak(w) : ""}</span></div>
         <div>${n} / ${w.dailyGoal} Wörter</div><div style="height:8px;border-radius:9px;background:${colr(a.color)[1]}"><div style="height:100%;width:${pct}%;border-radius:9px;background:${pct >= 100 ? "var(--ok)" : colr(a.color)[0]}"></div></div></div>`; }).join("")}
@@ -497,15 +495,6 @@ function vToday() {
 }
 
 // ----- Termine -----
-// ----- Termine: liegen im Apple-Kalender -----
-// Eine Web-App darf den Kalender nicht beschreiben. Deshalb öffnet sie die Kalender-App
-// am gewünschten Tag (calshow: erwartet Sekunden seit dem 1.1.2001).
-const isTouch = () => "ontouchend" in document;
-function calURL(dateIso) { const d = parseIso(dateIso); d.setHours(9, 0, 0, 0); return "calshow:" + Math.floor(d.getTime() / 1000 - 978307200); }
-function calLink(dateIso, label, cls = "btn pri") {
-  return isTouch() ? `<a class="${cls}" href="${calURL(dateIso)}" style="text-decoration:none">${ic("calendar")}${esc(label)}</a>` : "";
-}
-
 function evRow(e, showDay = false) {
   const a = area(e.area);
   const c = a ? colr(a.color)[0] : "var(--tq)";
@@ -517,18 +506,22 @@ function evRow(e, showDay = false) {
 function vCalendar() {
   const t = today();
   const d = draft.ev;
-  const old = S.events.slice().sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")));
+  const up = S.events.filter(e => e.date >= addDays(t, -7)).sort((a, b) => (a.date + (a.start || "")).localeCompare(b.date + (b.start || "")));
+  const days = [...new Set(up.map(e => e.date))];
   return `<div><div class="eyebrow">Termine</div><h1 class="h1">Kalender</h1></div>
-    <div class="card"><div class="ct">${ic("calendar")}Termine im Kalender</div>
-      <div>Deine Termine führst du in der <b>Kalender-App</b>. So sind sie auf iPad, iPhone und Mac gleich, und die Mac-App von Cowork Space zeigt sie automatisch an.</div>
-      ${isTouch() ? `<div class="row">${calLink(t, "Heute im Kalender")}${calLink(addDays(t, 1), "Morgen", "btn")}${calLink(addDays(t, 7), "In einer Woche", "btn")}</div>
-      <div class="row"><div style="width:190px">${inp(d, "date", { type: "date", rr: true })}</div>${calLink(d.date || t, "Diesen Tag öffnen", "btn")}</div>
-      <div class="hint small">Im Kalender oben rechts auf <b>+</b> tippen, um einen Termin anzulegen. Zurück zu Cowork Space geht es über den App-Umschalter.</div>`
-      : `<div class="hint">Am Mac legst du Termine in der Mac-App Cowork Space oder direkt in der Kalender-App an.</div>`}
-    </div>
-    ${old.length ? `<div class="card"><div class="ct">${ic("history")}Frühere Termine aus der Web-App</div>
-      <div class="hint small">Diese Termine stehen nur hier, nicht im Kalender. Trag sie bei Bedarf im Kalender ein und lösche sie dann hier.</div>
-      ${old.map(e => evRow(e, true)).join("")}</div>` : ""}`;
+    <div class="card"><div class="ct">${ic("calendar-plus")}Neuer Termin</div>
+      <form class="fgrid" data-form="addEvent">
+        ${fld("Titel", inp(d, "title", { ph: "z. B. Lernanker: Erstgespräch" }))}
+        ${fld("Datum", inp(d, "date", { type: "date" }))}
+        ${fld("Beginn", inp(d, "start", { type: "time" }))}
+        ${fld("Ende", inp(d, "end", { type: "time" }))}
+        ${fld("Ort", inp(d, "place", { ph: "optional" }))}
+        ${fld("Bereich", sel(d, "area", [["", "Kein Bereich"], ...S.areas.map(a => [a.id, a.name])], false))}
+        <div class="field" style="justify-content:flex-end"><button class="btn pri" type="submit">${ic("plus")}Eintragen</button></div>
+      </form>
+      <div class="hint small">Diese Termine liegen nur in der Web-App. Deinen Apple-Kalender siehst du weiter in der Kalender-App.</div></div>
+    <div class="card"><div class="ct">${ic("calendar")}Anstehend</div>
+      ${days.length ? days.map(day => `<div class="dayh">${day === t ? "Heute – " : day === addDays(t, 1) ? "Morgen – " : ""}${esc(fmtLong(day))}</div>${up.filter(e => e.date === day).map(e => evRow(e)).join("")}`).join("") : '<div class="hint">Noch keine Termine.</div>'}</div>`;
 }
 
 // ----- Bereich -----
@@ -544,7 +537,7 @@ function vArea(a) {
     const list = sortTasks(areaTasks(a.id).filter(t => ui.showDone || !t.done || t.doneAt === today()));
     const evs = S.events.filter(e => e.area === a.id && e.date >= today()).sort((x, y) => (x.date + (x.start || "")).localeCompare(y.date + (y.start || ""))).slice(0, 8);
     content = `<div class="cols"><div class="card"><div class="ct">${ic("list-checks")}Aufgaben</div>${quickAdd(a.id)}${taskList(list, false, "Noch keine Aufgaben in diesem Bereich.")}</div>
-      <div class="stack">${evs.length ? `<div class="card"><div class="ct">${ic("calendar")}Termine aus der Web-App</div>${evs.map(e => evRow(e, true)).join("")}</div>` : ""}
+      <div class="stack"><div class="card"><div class="ct">${ic("calendar")}Termine</div>${evs.length ? evs.map(e => evRow(e, true)).join("") : '<div class="hint">Keine Termine in diesem Bereich.</div>'}</div>
       <div class="card"><div class="ct">${ic("notebook-pen")}Notizen</div>${ta(S.notes, a.id, "Gedanken, Ideen, Links …", 8)}</div></div></div>`;
   }
   return `<div class="row"><span style="width:58px;height:58px;border-radius:16px;background:${pastel};color:${deep};display:grid;place-items:center">${ic(a.icon)}</span>
@@ -1042,6 +1035,10 @@ document.addEventListener("submit", e => {
     const due = { none: null, today: today(), tomorrow: addDays(today(), 1), week: addDays(today(), 7) }[d.due || "none"];
     S.tasks.push({ id: uid(), title, area: f.dataset.area || d.area || "", due, done: false, created: new Date().toISOString() });
     d.title = ""; save(); render(); const n = document.getElementById("newtask"); if (n) n.focus();
+  } else if (k === "addEvent") {
+    const d = draft.ev; if (!(d.title || "").trim() || !d.date) { toast("Bitte Titel und Datum angeben"); return; }
+    S.events.push({ id: uid(), title: d.title.trim(), date: d.date, start: d.start || "", end: d.end || "", place: d.place || "", area: d.area || "" });
+    draft.ev = { title: "", date: d.date, start: "", end: "", area: d.area, place: "" }; save(); render(); toast("Termin eingetragen");
   } else if (k === "addClient") {
     const a = curArea(); const n = (draft.client || "").trim(); if (!a || !n) return;
     const c = { id: uid(), name: n, birthday: null, school: "", guardian: "", email: "", phone: "", rate: 0, notes: "", active: true, startDate: today(), anamnesis: {}, findings: [], goals: [], planReview: null, sessions: [], sheets: [] };
